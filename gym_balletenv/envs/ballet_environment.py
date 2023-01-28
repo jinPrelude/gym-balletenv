@@ -299,7 +299,8 @@ class BalletEnvironment(gym.Env):
     self._done = False
     # let's go!
     observation, _, _ = self._current_game.its_showtime()
-    observation = self._render_observation(observation)
+    img_obs, instruct_str = self._render_observation(observation)
+    observation = (img_obs, LANG_DICT[instruct_str])
     return observation
 
   def step(self, action):
