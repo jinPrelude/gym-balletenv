@@ -282,7 +282,6 @@ class BalletEnvironment(gym.Env):
               i * UPSAMPLE_SIZE:(i + 1) * UPSAMPLE_SIZE, j *
               UPSAMPLE_SIZE:(j + 1) * UPSAMPLE_SIZE] = self._char_to_template[
                   this_char]
-    image /= 255.
     language = LANG_DICT[self._current_game.the_plot["instruction_string"]]
     full_observation = (image, language)
     return full_observation
