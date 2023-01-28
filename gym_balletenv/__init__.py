@@ -1,6 +1,6 @@
 from gym.envs.registration import register
 
 register(
-    id='balletenv-v0',
-    entry_point='gym_examples.envs:ballet_environment',
+    id='gym_balletenv/balletenv-v0',
+    entry_point='gym_balletenv.envs:ballet_environment',
 )

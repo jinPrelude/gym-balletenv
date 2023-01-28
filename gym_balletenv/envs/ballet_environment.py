@@ -208,6 +208,10 @@ class BalletEnvironment(gym.Env):
       rng: An optional numpy Random Generator, to set a fixed seed use e.g.
           `rng=np.random.default_rng(seed=...)`
     """
+    super(BalletEnvironment, self).__init__()
+
+    assert self._num_dancers in range(1, 9)
+    assert self._max_steps >= 320
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
     self._max_steps = max_steps
@@ -217,8 +221,8 @@ class BalletEnvironment(gym.Env):
       (Box(low=0.0, high=1.0, shape=img_size, dtype=np.float32),
       Discrete(14))
     )
-
     self.action_space = Discrete(8)
+    self.reward_range = (0, 1)
 
     # internal state
     if rng is None:
