@@ -217,7 +217,7 @@ class BalletEnvironment(gym.Env):
 
     img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, 3)
     self.observation_space = Tuple(
-      (Box(low=0.0, high=1.0, shape=img_size, dtype=np.float32),
+      (Box(low=0, high=255, shape=img_size, dtype=np.uint8),
       Discrete(14))
     )
     self.action_space = Discrete(8)
@@ -273,7 +273,7 @@ class BalletEnvironment(gym.Env):
     observation = self._cropper.crop(observation)
     obs_rows, obs_cols = observation.board.shape
     image = np.zeros([obs_rows * UPSAMPLE_SIZE, obs_cols * UPSAMPLE_SIZE, 3],
-                     dtype=np.float32)
+                     dtype=np.uint8)
     for i in range(obs_rows):
       for j in range(obs_cols):
         this_char = chr(observation.board[i, j])
