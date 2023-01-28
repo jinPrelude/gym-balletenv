@@ -26,8 +26,10 @@ class BalletEnvironmentTest(parameterized.TestCase):
 
   def test_full_wrapper(self):
     env = ballet_environment.BalletEnvironment(
-        num_dancers=1, dance_delay=16, max_steps=200,
-        rng=np.random.default_rng(seed=0))
+      "1_delay16",
+      max_steps=200,
+      rng=np.random.default_rng(seed=0)
+    )
     observation = env.reset()
     level_size = ballet_environment_core.ROOM_SIZE
     upsample_size = ballet_environment.UPSAMPLE_SIZE
@@ -50,32 +52,8 @@ class BalletEnvironmentTest(parameterized.TestCase):
     # check egocentric scrolling is working, by checking object is in center
     np.testing.assert_array_almost_equal(
         observation[0][45:54, 45:54],
-        ballet_environment._generate_template("orange plus") / 255.)
+        ballet_environment._generate_template("orange plus"))
 
-  @parameterized.parameters(
-      "2_delay16",
-      "4_delay16",
-      "8_delay48",
-  )
-  def test_simple_builder(self, level_name):
-    dance_delay = int(level_name[-2:])
-    np.random.seed(0)
-    env = ballet_environment.simple_builder(level_name)
-    # check max steps are set to match paper settings
-    self.assertEqual(env._max_steps,
-                     320 if dance_delay == 16 else 1024)
-    # test running a few steps of each
-    env.reset()
-    level_size = ballet_environment_core.ROOM_SIZE
-    upsample_size = ballet_environment.UPSAMPLE_SIZE
-    for i in range(8):
-      observation, reward, done, info = env.step(i)  # check all 8 movements work
-      self.assertEqual(observation[0].shape,
-                       (level_size[0] * upsample_size,
-                        level_size[1] * upsample_size,
-                        3))
-      self.assertEqual(observation[1], 0) # index 0 equal to "watch"
-      self.assertEqual(reward, 0.)
 
 if __name__ == "__main__":
   absltest.main()

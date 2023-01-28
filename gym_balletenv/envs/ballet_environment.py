@@ -195,7 +195,7 @@ class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
   metadata = {"render_modes": ["rgb_array"]}
 
-  def __init__(self, num_dancers, dance_delay, max_steps, rng=None):
+  def __init__(self, level_name, max_steps, rng=None):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -210,6 +210,10 @@ class BalletEnvironment(gym.Env):
     """
     super(BalletEnvironment, self).__init__()
 
+    num_dancers, dance_delay = level_name.split("_")
+    num_dancers = int(num_dancers)
+    dance_delay = int(dance_delay[5:])
+  
     assert num_dancers in range(1, 9)
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
@@ -331,33 +335,10 @@ class BalletEnvironment(gym.Env):
             (self._current_game.the_plot.frame >= self._max_steps))
 
 
-def simple_builder(level_name):
-  """Simplifies building from fixed defs.
-
-  Args:
-    level_name: '{num_dancers}_delay{delay_length}', where each variable is an
-        integer. The levels used in the paper were:
-        ['2_delay16', '4_delay16', '8_delay16',
-         '2_delay48', '4_delay48', '8_delay48']
-
-  Returns:
-    A BalletEnvironment with the requested settings.
-  """
-  num_dancers, dance_delay = level_name.split("_")
-  num_dancers = int(num_dancers)
-  dance_delay = int(dance_delay[5:])
-  max_steps = 320 if dance_delay == 16 else 1024
-  level_args = dict(
-      num_dancers=num_dancers,
-      dance_delay=dance_delay,
-      max_steps=max_steps)
-  return BalletEnvironment(**level_args)
-
-
 def main(argv):
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
-  env = simple_builder("4_delay16")
+  env = BalletEnvironment("4_delay16")
   for _ in range(3):
     obs = env.reset().observation
     for _ in range(300):
