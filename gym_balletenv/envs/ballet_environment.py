@@ -31,12 +31,13 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import dm_env
+import gym
+from gym.spaces import Tuple, Box, MultiBinary, Discrete
 
 import numpy as np
 from pycolab import cropping
 
-from hierarchical_transformer_memory.pycolab_ballet import ballet_environment_core as ballet_core
+from gym_balletenv.envs import ballet_environment_core as ballet_core
 
 FLAGS = flags.FLAGS
 
@@ -173,14 +174,31 @@ def get_scrolling_cropper(rows=9, cols=9, crop_pad_char=" "):
                                    pad_char=crop_pad_char,
                                    scroll_margins=(None, None))
 
+LANG_DICT = {
+  "watch": 0,
+  "circle_cw": 1,
+  "circle_ccw": 2,
+  "up_and_down": 3,
+  "left_and_right": 4,
+  "diagonal_uldr": 5,
+  "diagonal_urdl": 6,
+  "plus_cw": 7,
+  "plus_ccw": 8,
+  "times_cw": 9,
+  "times_ccw": 10,
+  "zee": 11,
+  "chevron_down": 12,
+  "chevron_up": 13
+}
 
-class BalletEnvironment(dm_env.Environment):
+class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
+  metadata = {"render_modes": ["rgb_array"]}
 
   def __init__(self, num_dancers, dance_delay, max_steps, rng=None):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
-    This class inherits from dm_env and has all the expected methods and specs.
+    This class inherits from gym and has all the expected methods and specs.
 
     Args:
       num_dancers: The number of dancers to use, between 1 and 8 (inclusive).
@@ -194,12 +212,20 @@ class BalletEnvironment(dm_env.Environment):
     self._dance_delay = dance_delay
     self._max_steps = max_steps
 
+    img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, 3)
+    self.observation_space = Tuple(
+      (Box(low=0.0, high=1.0, shape=img_size, dtype=np.float32),
+      Discrete(14))
+    )
+
+    self.action_space = Discrete(8)
+
     # internal state
     if rng is None:
       rng = np.random.default_rng()
     self._rng = rng
     self._current_game = None       # Current pycolab game instance.
-    self._state = None              # Current game step state.
+    self._done = False              # Current game done.
     self._game_over = None          # Whether the game has ended.
     self._char_to_template = None   # Mapping of chars to sprite images.
 
@@ -254,7 +280,7 @@ class BalletEnvironment(dm_env.Environment):
               UPSAMPLE_SIZE:(j + 1) * UPSAMPLE_SIZE] = self._char_to_template[
                   this_char]
     image /= 255.
-    language = np.array(self._current_game.the_plot["instruction_string"])
+    language = LANG_DICT[self._current_game.the_plot["instruction_string"]]
     full_observation = (image, language)
     return full_observation
 
@@ -268,20 +294,16 @@ class BalletEnvironment(dm_env.Environment):
             "char_to_color_shape"]}
     self._char_to_template.update(_CHAR_TO_TEMPLATE_BASE)
     self._cropper.set_engine(self._current_game)
-    self._state = dm_env.StepType.FIRST
+    self._done = False
     # let's go!
     observation, _, _ = self._current_game.its_showtime()
     observation = self._render_observation(observation)
-    return dm_env.TimeStep(
-        step_type=self._state,
-        reward=None,
-        discount=None,
-        observation=observation)
+    return observation
 
   def step(self, action):
     """Apply action, step the world forward, and return observations."""
     # If needed, reset and start new episode.
-    if self._state == dm_env.StepType.LAST:
+    if self._done == True:
       self._clear_state()
     if self._current_game is None:
       return self.reset()
@@ -295,36 +317,12 @@ class BalletEnvironment(dm_env.Environment):
 
     # Check the current status of the game.
     if self._game_over:
-      self._state = dm_env.StepType.LAST
+      self._done = True
     else:
-      self._state = dm_env.StepType.MID
+      self._done = False
 
-    return dm_env.TimeStep(
-        step_type=self._state,
-        reward=reward,
-        discount=discount,
-        observation=observation)
+    return observation, reward, self._done, {}
 
-  @property
-  def observation_spec(self):
-    image_shape = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE,
-                   SCROLL_CROP_SIZE * UPSAMPLE_SIZE,
-                   3)
-    return (
-        # vision
-        dm_env.specs.Array(
-            shape=image_shape, dtype=np.float32, name="image"),
-        # language
-        dm_env.specs.Array(
-            shape=[], dtype=str, name="language"),
-        )
-
-  @property
-  def action_spec(self):
-    return dm_env.specs.BoundedArray(
-        shape=[], dtype="int32",
-        minimum=0, maximum=7,
-        name="grid_actions")
 
   def _is_game_over(self):
     """Returns whether it is game over, either from the engine or timeout."""
@@ -333,7 +331,7 @@ class BalletEnvironment(dm_env.Environment):
 
   def _clear_state(self):
     """Clear all the internal information about the game."""
-    self._state = None
+    self._done = False
     self._current_game = None
     self._char_to_template = None
     self._game_over = None

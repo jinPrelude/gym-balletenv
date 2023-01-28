@@ -18,8 +18,8 @@ from absl.testing import parameterized
 
 import numpy as np
 
-from hierarchical_transformer_memory.pycolab_ballet import ballet_environment
-from hierarchical_transformer_memory.pycolab_ballet import ballet_environment_core
+from gym_balletenv.envs import ballet_environment
+from gym_balletenv.envs import ballet_environment_core
 
 
 class BalletEnvironmentTest(parameterized.TestCase):
@@ -28,31 +28,28 @@ class BalletEnvironmentTest(parameterized.TestCase):
     env = ballet_environment.BalletEnvironment(
         num_dancers=1, dance_delay=16, max_steps=200,
         rng=np.random.default_rng(seed=0))
-    result = env.reset()
-    self.assertIsNone(result.reward)
+    observation = env.reset()
     level_size = ballet_environment_core.ROOM_SIZE
     upsample_size = ballet_environment.UPSAMPLE_SIZE
     # wait for dance to complete
     for i in range(30):
-      result = env.step(0).observation
-      self.assertEqual(result[0].shape,
+      observation = env.step(0)[0]
+      self.assertEqual(observation[0].shape,
                        (level_size[0] * upsample_size,
                         level_size[1] * upsample_size,
                         3))
-      self.assertEqual(str(result[1])[:5],
-                       np.array("watch"))
+      self.assertEqual(observation[1], 0) # index 0 equal to "watch"
     for i in [1, 1, 1, 1]:  # first gets eaten before agent can move
-      result = env.step(i)
-      self.assertEqual(result.observation[0].shape,
+      observation, reward, done, info = env.step(i)
+      self.assertEqual(observation[0].shape,
                        (level_size[0] * upsample_size,
                         level_size[1] * upsample_size,
                         3))
-      self.assertEqual(str(result.observation[1])[:11],
-                       np.array("up_and_down"))
-    self.assertEqual(result.reward, 1.)
+      self.assertEqual(observation[1], 3) # index 3 equal to "up_and_down"
+    self.assertEqual(reward, 1.)
     # check egocentric scrolling is working, by checking object is in center
     np.testing.assert_array_almost_equal(
-        result.observation[0][45:54, 45:54],
+        observation[0][45:54, 45:54],
         ballet_environment._generate_template("orange plus") / 255.)
 
   @parameterized.parameters(
@@ -72,14 +69,13 @@ class BalletEnvironmentTest(parameterized.TestCase):
     level_size = ballet_environment_core.ROOM_SIZE
     upsample_size = ballet_environment.UPSAMPLE_SIZE
     for i in range(8):
-      result = env.step(i)  # check all 8 movements work
-      self.assertEqual(result.observation[0].shape,
+      observation, reward, done, info = env.step(i)  # check all 8 movements work
+      self.assertEqual(observation[0].shape,
                        (level_size[0] * upsample_size,
                         level_size[1] * upsample_size,
                         3))
-      self.assertEqual(str(result.observation[1])[:5],
-                       np.array("watch"))
-      self.assertEqual(result.reward, 0.)
+      self.assertEqual(observation[1], 0) # index 0 equal to "watch"
+      self.assertEqual(reward, 0.)
 
 if __name__ == "__main__":
   absltest.main()
