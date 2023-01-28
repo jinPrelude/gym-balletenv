@@ -210,8 +210,7 @@ class BalletEnvironment(gym.Env):
     """
     super(BalletEnvironment, self).__init__()
 
-    assert self._num_dancers in range(1, 9)
-    assert self._max_steps >= 320
+    assert num_dancers in range(1, 9)
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
     self._max_steps = max_steps
@@ -306,11 +305,6 @@ class BalletEnvironment(gym.Env):
 
   def step(self, action):
     """Apply action, step the world forward, and return observations."""
-    # If needed, reset and start new episode.
-    if self._done == True:
-      self._clear_state()
-    if self._current_game is None:
-      return self.reset()
 
     # Execute the action in pycolab.
     observation, reward, discount = self._current_game.play(action)
@@ -332,13 +326,6 @@ class BalletEnvironment(gym.Env):
     """Returns whether it is game over, either from the engine or timeout."""
     return (self._current_game.game_over or
             (self._current_game.the_plot.frame >= self._max_steps))
-
-  def _clear_state(self):
-    """Clear all the internal information about the game."""
-    self._done = False
-    self._current_game = None
-    self._char_to_template = None
-    self._game_over = None
 
 
 def simple_builder(level_name):
