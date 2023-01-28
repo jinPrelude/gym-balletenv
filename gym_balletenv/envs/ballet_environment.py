@@ -282,7 +282,7 @@ class BalletEnvironment(gym.Env):
               i * UPSAMPLE_SIZE:(i + 1) * UPSAMPLE_SIZE, j *
               UPSAMPLE_SIZE:(j + 1) * UPSAMPLE_SIZE] = self._char_to_template[
                   this_char]
-    language = LANG_DICT[self._current_game.the_plot["instruction_string"]]
+    language = self._current_game.the_plot["instruction_string"]
     full_observation = (image, language)
     return full_observation
 
@@ -310,7 +310,8 @@ class BalletEnvironment(gym.Env):
 
     self._game_over = self._is_game_over()
     reward = reward if reward is not None else 0.
-    observation = self._render_observation(observation)
+    img_obs, instruct_str = self._render_observation(observation)
+    observation = (img_obs, LANG_DICT[instruct_str])
 
     # Check the current status of the game.
     if self._game_over:
@@ -318,7 +319,9 @@ class BalletEnvironment(gym.Env):
     else:
       self._done = False
 
-    return observation, reward, self._done, {}
+    # create info dict which contains real language string
+    info = {"instruction_string": instruct_str}
+    return observation, reward, self._done, info
 
 
   def _is_game_over(self):
