@@ -304,7 +304,7 @@ class BalletEnvironment(gym.Env):
     # let's go!
     observation, _, _ = self._current_game.its_showtime()
     img_obs, instruct_str = self._render_observation(observation)
-    lang_one_hot = np.zeros(len(LANG_DICT))
+    lang_one_hot = np.zeros(len(LANG_DICT), dtype=np.uint8)
     lang_one_hot[LANG_DICT[instruct_str]] = 1
     observation = (img_obs, lang_one_hot)
     return observation
@@ -318,7 +318,7 @@ class BalletEnvironment(gym.Env):
     self._game_over = self._is_game_over()
     reward = reward if reward is not None else 0.
     img_obs, instruct_str = self._render_observation(observation)
-    lang_one_hot = np.zeros(len(LANG_DICT))
+    lang_one_hot = np.zeros(len(LANG_DICT), dtype=np.uint8)
     lang_one_hot[LANG_DICT[instruct_str]] = 1
     observation = (img_obs, lang_one_hot)
 
