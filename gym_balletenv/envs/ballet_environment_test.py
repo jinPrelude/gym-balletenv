@@ -40,18 +40,14 @@ class BalletEnvironmentTest(parameterized.TestCase):
                        (level_size[0] * upsample_size,
                         level_size[1] * upsample_size,
                         3))
-      watch_one_hot = np.zeros(14)
-      watch_one_hot[0] = 1
-      self.assertSequenceEqual(observation[1].tolist(), watch_one_hot.tolist())
+      self.assertEqual(observation[1], 0) # index 0 equal to "watch"
     for i in [1, 1, 1, 1]:  # first gets eaten before agent can move
       observation, reward, done, info = env.step(i)
       self.assertEqual(observation[0].shape,
                        (level_size[0] * upsample_size,
                         level_size[1] * upsample_size,
                         3))
-      up_and_down_one_hot = np.zeros(14)
-      up_and_down_one_hot[3] = 1
-      self.assertSequenceEqual(observation[1].tolist(), up_and_down_one_hot.tolist()) # index 3 equal to "up_and_down"
+      self.assertEqual(observation[1], 3) # index 3 equal to "up_and_down"
     self.assertEqual(reward, 1.)
     # check egocentric scrolling is working, by checking object is in center
     np.testing.assert_array_almost_equal(
