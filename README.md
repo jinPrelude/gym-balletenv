@@ -20,10 +20,10 @@ cd gym-balletenv
 pip install -e .
 ```
 # Usage
-### Check out the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-balletenv-example) for the usage of gym-balletenv and its wrappers.
+Check out the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-balletenv-example) for the usage of gym-balletenv and its wrappers.
 
-# Prerequisite for RecordVideo wrapper
-if you want to use the wrapper RecordVideo, you need to install gifsicle first:
+## Prerequisite for RecordVideo wrapper
+[RecordVideo Wrapper](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/record_video.py) uses [pygifsicle](https://github.com/LucaCappelletti94/pygifsicle) for optimizing the recorded gif file, so you need to install gifsicle to use it:
 ```bash
 sudo apt-get install gifsicle
 ```
