@@ -9,6 +9,7 @@ Gym-style implementation of the original dm_env style [Ballet environment](https
     - [x] [gray_scale_observation](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/gray_scale_observation.py)
     - [x] [record_video](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/record_video.py)
     - [x] [transpose_observation](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/transpose_observation.py)
+    - [x] [OhehotLanguage](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/onehot_language.py)
 - And the following gym wrappers are also tested for gym-balletenv:
     - [x] [gym.wrappers.RecordEpisodeStatistics](https://github.com/openai/gym/blob/master/gym/wrappers/record_episode_statistics.py)
     - [x] [gym.vector.SyncVectorEnv](https://github.com/openai/gym/blob/master/gym/vector/sync_vector_env.py)
