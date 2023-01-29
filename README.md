@@ -5,7 +5,7 @@ Gym-style implementation of the original dm_env style [Ballet environment](https
 
 # What's changed
 - Gym-style implementation of the original dm_env style [Ballet environment](https://github.com/deepmind/deepmind-research/tree/master/hierarchical_transformer_memory)
-- Implement wrappers for gym-balletenv in the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-balletenv-example), which are following:
+- Implement wrappers for gym-balletenv in the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-balletenv-example):
     - [x] [gray_scale_observation](https://github.com/jinPrelude/gym-balletenv-example/blob/master/wrappers/gray_scale_observation.py)
     - [x] [record_video](https://github.com/jinPrelude/gym-balletenv-example/blob/master/wrappers/record_video.py)
     - [x] [transpose_observation](https://github.com/jinPrelude/gym-balletenv-example/blob/master/wrappers/transpose_observation.py)
