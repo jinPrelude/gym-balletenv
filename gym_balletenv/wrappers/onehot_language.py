@@ -3,7 +3,7 @@
 import numpy as np
 
 import gym
-from gym.spaces import Box, Tuple, MultiBinary
+from gym.spaces import Box, Tuple, MultiBinary, Discrete
 
 class OnehotLanguage(gym.ObservationWrapper):
     """One-hot encode language observations from (N,) to (N, vocab_size)"""
@@ -18,7 +18,7 @@ class OnehotLanguage(gym.ObservationWrapper):
 
         assert (
             isinstance(self.observation_space[1], Discrete)
-            and self.observation_space[1].n == 1
+            and self.observation_space[1].n == 14
         )
 
         self.observation_space = Tuple(
@@ -29,4 +29,4 @@ class OnehotLanguage(gym.ObservationWrapper):
         image_obs, lang_obs = observation
         lang_one_hot = np.zeros(14, dtype=np.uint8)
         lang_one_hot[lang_obs] = 1
-        return (lang_one_hot, lang_one_hot)
+        return (image_obs, lang_one_hot)
