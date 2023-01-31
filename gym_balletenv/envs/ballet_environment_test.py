@@ -27,10 +27,9 @@ class BalletEnvironmentTest(parameterized.TestCase):
   def test_full_wrapper(self):
     env = ballet_environment.BalletEnvironment(
       "1_delay16",
-      max_steps=200,
-      rng=np.random.default_rng(seed=0)
+      max_steps=200
     )
-    observation = env.reset()
+    observation, _ = env.reset(seed=0)
     level_size = ballet_environment_core.ROOM_SIZE
     upsample_size = ballet_environment.UPSAMPLE_SIZE
     # wait for dance to complete
@@ -42,7 +41,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
                         3))
       self.assertEqual(observation[1], 0) # index 0 equal to "watch"
     for i in [1, 1, 1, 1]:  # first gets eaten before agent can move
-      observation, reward, done, info = env.step(i)
+      observation, reward, done, _, info = env.step(i)
       self.assertEqual(observation[0].shape,
                        (level_size[0] * upsample_size,
                         level_size[1] * upsample_size,
