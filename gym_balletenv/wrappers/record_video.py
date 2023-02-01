@@ -8,9 +8,9 @@ import numpy as np
 import cv2
 import imageio
 import pygifsicle
-import gym
-from gym import logger
-from gym.spaces import Box, Tuple, Discrete
+import gymnasium as gym
+from gymnasium import logger
+from gymnasium.spaces import Box, Tuple, Discrete
 
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:

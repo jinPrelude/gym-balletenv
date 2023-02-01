@@ -31,8 +31,8 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import gym
-from gym.spaces import Tuple, Box, MultiBinary, Discrete
+import gymnasium as gym
+from gymnasium.spaces import Tuple, Box, MultiBinary, Discrete
 
 import numpy as np
 from pycolab import cropping

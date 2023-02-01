@@ -2,7 +2,7 @@
 
 import numpy as np
 
-import gym
+import gymnasium as gym
 from gym.spaces import Box, Tuple, MultiBinary, Discrete
 
 class OnehotLanguage(gym.ObservationWrapper):
