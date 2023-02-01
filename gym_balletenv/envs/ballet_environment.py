@@ -288,7 +288,8 @@ class BalletEnvironment(gym.Env):
     full_observation = (image, language)
     return full_observation
 
-  def reset(self, seed=None):
+  def reset(self, seed=None, options=None):
+    # TODO : options not implemented
     """Start a new episode."""
     # set seed
     super().reset(seed=seed)
