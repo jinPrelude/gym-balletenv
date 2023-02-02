@@ -229,8 +229,6 @@ class BalletEnvironment(gym.Env):
 
   
     assert num_dancers in range(1, 9)
-    if easy_mode:
-      assert num_dancers == 2
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
     self._max_steps = max_steps
@@ -262,9 +260,9 @@ class BalletEnvironment(gym.Env):
     target_dancer_index = self.np_random.integers(self._num_dancers)
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
     if self._easy_mode:
-      positions = ballet_core.DANCER_POSITIONS_EASY.copy()
-      colors = list(COLORS_EASY.keys())  
-      shapes = DANCER_SHAPES_EASY.copy()
+      positions = ballet_core.DANCER_POSITIONS_EASY.copy()[:self._num_dancers]
+      colors = ["red"]  # No color difference in easy mode.
+      shapes = DANCER_SHAPES_EASY.copy()[:self._num_dancers]
     else:
       positions = ballet_core.DANCER_POSITIONS.copy()
       colors = list(COLORS.keys())  
