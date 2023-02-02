@@ -35,6 +35,7 @@ ROOM_SIZE = (11, 11)  # one square around edge will be wall.
 DANCER_POSITIONS = [(2, 2), (2, 5), (2, 8),
                     (5, 2), (5, 8),  # space in center for agent
                     (8, 2), (8, 5), (8, 8)]
+DANCER_POSITIONS_EASY = [(2, 2), (8, 8)]
 AGENT_START = (5, 5)
 AGENT_CHAR = "A"
 WALL_CHAR = "#"

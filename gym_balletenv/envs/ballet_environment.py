@@ -261,9 +261,14 @@ class BalletEnvironment(gym.Env):
     """Samples dancers and positions, returns a pycolab core game engine."""
     target_dancer_index = self.np_random.integers(self._num_dancers)
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
-    positions = ballet_core.DANCER_POSITIONS.copy()
-    colors = list(COLORS_EASY.keys() if self._easy_mode else COLORS.keys())  
-    shapes = DANCER_SHAPES_EASY.copy() if self._easy_mode else DANCER_SHAPES.copy()
+    if self._easy_mode:
+      positions = ballet_core.DANCER_POSITIONS_EASY.copy()
+      colors = list(COLORS_EASY.keys())  
+      shapes = DANCER_SHAPES_EASY.copy()
+    else:
+      positions = ballet_core.DANCER_POSITIONS.copy()
+      colors = list(COLORS.keys())  
+      shapes = DANCER_SHAPES.copy()
     self.np_random.shuffle(positions)
     self.np_random.shuffle(motions)
     self.np_random.shuffle(colors)
