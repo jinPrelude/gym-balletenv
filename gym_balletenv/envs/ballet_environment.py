@@ -72,6 +72,13 @@ COLORS = {
     "light_yellow": np.array([255, 255, 200]),
 }
 
+DANCER_SHAPES_EASY = ["triangle", "empty_square"]
+
+COLORS_EASY = {
+    "orange": np.array([255, 165, 0]),
+    "brown": np.array([128, 64, 0]),
+}
+
 
 def _generate_template(object_name):
   """Generates a template object image, given a name with color and shape."""
@@ -208,14 +215,26 @@ class BalletEnvironment(gym.Env):
     """
     super(BalletEnvironment, self).__init__()
 
-    num_dancers, dance_delay = level_name.split("_")
+    name_infos = level_name.split("_")
+    if len(name_infos) == 3:
+      num_dancers, dance_delay, level = name_infos
+      assert level == "easy"
+      easy_mode = True
+    elif len(name_infos) == 2:
+      num_dancers, dance_delay = name_infos
+      easy_mode = False
+  
     num_dancers = int(num_dancers)
     dance_delay = int(dance_delay[5:])
+
   
     assert num_dancers in range(1, 9)
+    if easy_mode:
+      assert num_dancers == 2
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
     self._max_steps = max_steps
+    self._easy_mode = easy_mode
 
     img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, 3)
     self.observation_space = Tuple(
@@ -243,8 +262,8 @@ class BalletEnvironment(gym.Env):
     target_dancer_index = self.np_random.integers(self._num_dancers)
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
     positions = ballet_core.DANCER_POSITIONS.copy()
-    colors = list(COLORS.keys())
-    shapes = DANCER_SHAPES.copy()
+    colors = list(COLORS_EASY.keys() if self._easy_mode else COLORS.keys())  
+    shapes = DANCER_SHAPES_EASY.copy() if self._easy_mode else DANCER_SHAPES.copy()
     self.np_random.shuffle(positions)
     self.np_random.shuffle(motions)
     self.np_random.shuffle(colors)

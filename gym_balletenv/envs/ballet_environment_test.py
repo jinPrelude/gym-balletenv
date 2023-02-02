@@ -29,6 +29,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
       "1_delay16",
       max_steps=200
     )
+    self.assertEqual(env._easy_mode, False)
     observation, _ = env.reset(seed=0)
     level_size = ballet_environment_core.ROOM_SIZE
     upsample_size = ballet_environment.UPSAMPLE_SIZE
@@ -52,6 +53,12 @@ class BalletEnvironmentTest(parameterized.TestCase):
     np.testing.assert_array_almost_equal(
         observation[0][45:54, 45:54],
         ballet_environment._generate_template("orange plus"))
+    
+    env = ballet_environment.BalletEnvironment(
+      "2_delay2_easy",
+      max_steps=200
+    )
+    self.assertEqual(env._easy_mode, True)
 
 
 if __name__ == "__main__":
