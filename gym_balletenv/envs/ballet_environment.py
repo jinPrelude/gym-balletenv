@@ -261,7 +261,7 @@ class BalletEnvironment(gym.Env):
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
     if self._easy_mode:
       positions = ballet_core.DANCER_POSITIONS_EASY.copy()[:self._num_dancers]
-      colors = ["red"]  # No color difference in easy mode.
+      colors = ["red" for _ in range(self._num_dancers)]  # No color difference in easy mode.
       shapes = DANCER_SHAPES_EASY.copy()[:self._num_dancers]
     else:
       positions = ballet_core.DANCER_POSITIONS.copy()
