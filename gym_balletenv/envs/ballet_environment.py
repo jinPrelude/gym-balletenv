@@ -72,13 +72,6 @@ COLORS = {
     "light_yellow": np.array([255, 255, 200]),
 }
 
-DANCER_SHAPES_EASY = ["triangle", "empty_square"]
-
-COLORS_EASY = {
-    "orange": np.array([255, 165, 0]),
-    "brown": np.array([128, 64, 0]),
-}
-
 
 def _generate_template(object_name):
   """Generates a template object image, given a name with color and shape."""
@@ -260,9 +253,9 @@ class BalletEnvironment(gym.Env):
     target_dancer_index = self.np_random.integers(self._num_dancers)
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
     if self._easy_mode:
-      positions = ballet_core.DANCER_POSITIONS_EASY.copy()[:self._num_dancers]
+      positions = ballet_core.DANCER_POSITIONS.copy()[:self._num_dancers]
       colors = ["red" for _ in range(self._num_dancers)]  # No color difference in easy mode.
-      shapes = DANCER_SHAPES_EASY.copy()[:self._num_dancers]
+      shapes = DANCER_SHAPES.copy()[:self._num_dancers]
     else:
       positions = ballet_core.DANCER_POSITIONS.copy()
       colors = list(COLORS.keys())  
