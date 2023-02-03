@@ -1,8 +1,10 @@
 # gym-balletenv
 Gym-style implementation of the original dm_env style [Ballet environment](https://github.com/deepmind/deepmind-research/tree/master/hierarchical_transformer_memory) which is introduced in [Towards mental time travel: a hierarchical memory for reinforcement learning agents](https://arxiv.org/abs/2105.14039).
 
-![images](https://user-images.githubusercontent.com/16518993/215299001-faeb4aa1-8665-4772-a2a8-6139615a5a25.gif)
-*Rendered gif using [record_video wrapper](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/record_video.py).*
+<p float="center">
+  <img src="https://user-images.githubusercontent.com/16518993/215299001-faeb4aa1-8665-4772-a2a8-6139615a5a25.gif" width="250" />
+</p>
+
 # Featuers
 - Gym-style implementation of the original dm_env style [Ballet environment](https://github.com/deepmind/deepmind-research/tree/master/hierarchical_transformer_memory)
 - Support [gymnasium](https://github.com/Farama-Foundation/Gymnasium)>=0.27.0 in [v.0.0.2](https://github.com/jinPrelude/gym-balletenv/releases/tag/0.0.2) (older gym style is supported in [v.0.0.1](https://github.com/jinPrelude/gym-balletenv/releases/tag/0.0.1))
