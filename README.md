@@ -25,13 +25,14 @@ cd gym-balletenv
 pip install -e .
 ```
 # Usage
-This is very example code for gym-balletenv :
+Example code for gym-balletenv :
 ```python
 from gym_balletenv.envs import BalletEnvironment
 from gym_balletenv.wrappers import GrayScaleObservation
 
 
 env = BalletEnvironment(env_id="2_delay16", max_steps=320)
+env = GrayScaleObservation(env)
 
 obs, info = env.reset(seed=0)
 terminated = False
