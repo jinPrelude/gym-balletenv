@@ -2,8 +2,8 @@
 
 import numpy as np
 
-import gym
-from gym.spaces import Box, Tuple
+import gymnasium as gym
+from gymnasium.spaces import Box, Tuple
 
 
 class TransposeObservation(gym.ObservationWrapper):

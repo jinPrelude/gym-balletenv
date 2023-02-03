@@ -31,8 +31,8 @@ from absl import app
 from absl import flags
 from absl import logging
 
-import gym
-from gym.spaces import Tuple, Box, MultiBinary, Discrete
+import gymnasium as gym
+from gymnasium.spaces import Tuple, Box, MultiBinary, Discrete
 
 import numpy as np
 from pycolab import cropping
@@ -195,7 +195,7 @@ class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
   metadata = {"render_modes": ["rgb_array"]}
 
-  def __init__(self, level_name, max_steps, rng=None):
+  def __init__(self, level_name, max_steps, render_mode=None):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -205,19 +205,27 @@ class BalletEnvironment(gym.Env):
       dance_delay: How long to delay between the dances.
       max_steps: The maximum number of steps to allow in an episode, after which
           it will terminate.
-      rng: An optional numpy Random Generator, to set a fixed seed use e.g.
-          `rng=np.random.default_rng(seed=...)`
     """
     super(BalletEnvironment, self).__init__()
 
-    num_dancers, dance_delay = level_name.split("_")
+    name_infos = level_name.split("_")
+    if len(name_infos) == 3:
+      num_dancers, dance_delay, level = name_infos
+      assert level == "easy"
+      easy_mode = True
+    elif len(name_infos) == 2:
+      num_dancers, dance_delay = name_infos
+      easy_mode = False
+  
     num_dancers = int(num_dancers)
     dance_delay = int(dance_delay[5:])
+
   
     assert num_dancers in range(1, 9)
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
     self._max_steps = max_steps
+    self._easy_mode = easy_mode
 
     img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, 3)
     self.observation_space = Tuple(
@@ -227,10 +235,10 @@ class BalletEnvironment(gym.Env):
     self.action_space = Discrete(8)
     self.reward_range = (0, 1)
 
+    assert render_mode is None or render_mode in self.metadata["render_modes"]
+    self.render_mode = render_mode
+
     # internal state
-    if rng is None:
-      rng = np.random.default_rng()
-    self._rng = rng
     self._current_game = None       # Current pycolab game instance.
     self._done = False              # Current game done.
     self._game_over = None          # Whether the game has ended.
@@ -242,15 +250,20 @@ class BalletEnvironment(gym.Env):
 
   def _game_factory(self):
     """Samples dancers and positions, returns a pycolab core game engine."""
-    target_dancer_index = self._rng.integers(self._num_dancers)
+    target_dancer_index = self.np_random.integers(self._num_dancers)
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
-    positions = ballet_core.DANCER_POSITIONS.copy()
-    colors = list(COLORS.keys())
-    shapes = DANCER_SHAPES.copy()
-    self._rng.shuffle(positions)
-    self._rng.shuffle(motions)
-    self._rng.shuffle(colors)
-    self._rng.shuffle(shapes)
+    if self._easy_mode:
+      positions = ballet_core.DANCER_POSITIONS.copy()[:self._num_dancers]
+      colors = ["red" for _ in range(self._num_dancers)]  # No color difference in easy mode.
+      shapes = DANCER_SHAPES.copy()[:self._num_dancers]
+    else:
+      positions = ballet_core.DANCER_POSITIONS.copy()
+      colors = list(COLORS.keys())  
+      shapes = DANCER_SHAPES.copy()
+    self.np_random.shuffle(positions)
+    self.np_random.shuffle(motions)
+    self.np_random.shuffle(colors)
+    self.np_random.shuffle(shapes)
     dancers_and_properties = []
     for dancer_i in range(self._num_dancers):
       if dancer_i == target_dancer_index:
@@ -272,7 +285,7 @@ class BalletEnvironment(gym.Env):
         dancers_and_properties=dancers_and_properties,
         dance_delay=self._dance_delay)
 
-  def _render_observation(self, observation):
+  def _get_obs(self, observation):
     """Renders from raw pycolab image observation to agent-usable ones."""
     observation = self._cropper.crop(observation)
     obs_rows, obs_cols = observation.board.shape
@@ -290,8 +303,11 @@ class BalletEnvironment(gym.Env):
     full_observation = (image, language)
     return full_observation
 
-  def reset(self):
+  def reset(self, seed=None, options=None):
+    # TODO : options not implemented
     """Start a new episode."""
+    # set seed
+    super().reset(seed=seed)
     # Build a new game and retrieve its first set of state/reward/discount.
     self._current_game = self._game_factory()
     # set up rendering, cropping, and state for current game
@@ -303,9 +319,10 @@ class BalletEnvironment(gym.Env):
     self._done = False
     # let's go!
     observation, _, _ = self._current_game.its_showtime()
-    img_obs, instruct_str = self._render_observation(observation)
+    img_obs, instruct_str = self._get_obs(observation)
     observation = (img_obs, LANG_DICT[instruct_str])
-    return observation
+    info = {"instruction_string": instruct_str}
+    return observation, info
 
   def step(self, action):
     """Apply action, step the world forward, and return observations."""
@@ -315,7 +332,7 @@ class BalletEnvironment(gym.Env):
 
     self._game_over = self._is_game_over()
     reward = reward if reward is not None else 0.
-    img_obs, instruct_str = self._render_observation(observation)
+    img_obs, instruct_str = self._get_obs(observation)
     observation = (img_obs, LANG_DICT[instruct_str])
 
     # Check the current status of the game.
@@ -326,7 +343,8 @@ class BalletEnvironment(gym.Env):
 
     # create info dict which contains real language string
     info = {"instruction_string": instruct_str}
-    return observation, reward, self._done, info
+    # TODO : differentiate between termination & truncation for gym>=0.26.0
+    return observation, reward, self._done, False, info
 
 
   def _is_game_over(self):

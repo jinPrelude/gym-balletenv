@@ -8,9 +8,9 @@ import numpy as np
 import cv2
 import imageio
 import pygifsicle
-import gym
-from gym import logger
-from gym.spaces import Box, Tuple, Discrete
+import gymnasium as gym
+from gymnasium import logger
+from gymnasium.spaces import Box, Tuple, Discrete
 
 
 def capped_cubic_video_schedule(episode_id: int) -> bool:
@@ -95,14 +95,14 @@ class RecordVideo(gym.Wrapper):
         return self.episode_trigger(self.episode_id)
 
     def reset(self, **kwargs):
-        observation = super().reset(**kwargs)
+        observation, info = super().reset(**kwargs)
         self.done = False
         if self._video_enabled():
             self.start_video_recording(observation)
-        return observation
+        return observation, info
 
     def step(self, action):
-        observation, reward, done, info = super().step(action)
+        observation, reward, done, truncation, info = super().step(action) # TODO : support real termination & truncation
 
         if not self.done:
             if done:
@@ -116,4 +116,4 @@ class RecordVideo(gym.Wrapper):
             if done:
                 self.close_video_recorder()
 
-        return observation, reward, done, info
+        return observation, reward, done, truncation, info

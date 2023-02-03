@@ -4,8 +4,8 @@ original code
 """
 import numpy as np
 
-import gym
-from gym.spaces import Box, Tuple, Discrete
+import gymnasium as gym
+from gymnasium.spaces import Box, Tuple, Discrete
 
 
 class GrayScaleObservation(gym.ObservationWrapper):

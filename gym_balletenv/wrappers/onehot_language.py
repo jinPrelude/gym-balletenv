@@ -2,8 +2,8 @@
 
 import numpy as np
 
-import gym
-from gym.spaces import Box, Tuple, MultiBinary, Discrete
+import gymnasium as gym
+from gymnasium.spaces import Box, Tuple, MultiBinary, Discrete
 
 class OnehotLanguage(gym.ObservationWrapper):
     """One-hot encode language observations from (N,) to (N, vocab_size)"""
