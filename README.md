@@ -7,7 +7,7 @@ Gym-style implementation of the original dm_env style [Ballet environment](https
 
 # Featuers
 - Gym-style implementation of the original dm_env style [Ballet environment](https://github.com/deepmind/deepmind-research/tree/master/hierarchical_transformer_memory)
-- Support [gymnasium](https://github.com/Farama-Foundation/Gymnasium)>=0.27.0 in [v.0.0.2](https://github.com/jinPrelude/gym-balletenv/releases/tag/0.0.2) (older gym style is supported in [v.0.0.1](https://github.com/jinPrelude/gym-balletenv/releases/tag/0.0.1))
+- Support [gymnasium](https://github.com/Farama-Foundation/Gymnasium)>=0.27.0 in [v.0.0.2](https://github.com/jinPrelude/gym-balletenv/releases/tag/v0.0.2) (older gym style is supported in [v.0.0.1](https://github.com/jinPrelude/gym-balletenv/releases/tag/v0.0.1))
 - Implement wrappers for gym-balletenv:
     - [x] [gray_scale_observation](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/gray_scale_observation.py)
     - [x] [record_video](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/record_video.py)
