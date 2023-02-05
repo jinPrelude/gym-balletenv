@@ -194,7 +194,7 @@ LANG_DICT = {
 
 class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
-  metadata = {"render_modes": ["rgb_array"]}
+  metadata = {"render_modes": ["rgb_array"], "render_fps": 15}
 
   def __init__(self, level_name, max_steps, render_mode="rgb_array"):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
