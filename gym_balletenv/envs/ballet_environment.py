@@ -196,7 +196,7 @@ class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
   metadata = {"render_modes": ["rgb_array"]}
 
-  def __init__(self, level_name, max_steps, render_mode=None):
+  def __init__(self, level_name, max_steps, render_mode="rgb_array"):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -351,7 +351,7 @@ class BalletEnvironment(gym.Env):
     # TODO : differentiate between termination & truncation for gym>=0.26.0
     return observation, reward, self._done, False, info
 
-  def render():
+  def render(self):
     canvas = np.zeros((99, 200, 3), dtype=np.uint8)
     canvas[:, :99, :] = self.curr_img_obs
     if self.curr_lang_obs:
