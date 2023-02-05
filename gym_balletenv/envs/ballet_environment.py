@@ -35,6 +35,7 @@ import gymnasium as gym
 from gymnasium.spaces import Tuple, Box, MultiBinary, Discrete
 
 import numpy as np
+import cv2
 from pycolab import cropping
 
 from gym_balletenv.envs import ballet_environment_core as ballet_core
@@ -195,7 +196,7 @@ class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
   metadata = {"render_modes": ["rgb_array"]}
 
-  def __init__(self, level_name, max_steps, render_mode=None):
+  def __init__(self, level_name, max_steps, render_mode="rgb_array"):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -237,6 +238,9 @@ class BalletEnvironment(gym.Env):
 
     assert render_mode is None or render_mode in self.metadata["render_modes"]
     self.render_mode = render_mode
+
+    self.curr_img_obs = None
+    self.curr_lang_obs = None
 
     # internal state
     self._current_game = None       # Current pycolab game instance.
@@ -299,8 +303,9 @@ class BalletEnvironment(gym.Env):
               i * UPSAMPLE_SIZE:(i + 1) * UPSAMPLE_SIZE, j *
               UPSAMPLE_SIZE:(j + 1) * UPSAMPLE_SIZE] = self._char_to_template[
                   this_char]
-    language = self._current_game.the_plot["instruction_string"]
-    full_observation = (image, language)
+    self.curr_lang_obs = self._current_game.the_plot["instruction_string"]
+    self.curr_img_obs = image
+    full_observation = (self.curr_img_obs, self.curr_lang_obs)
     return full_observation
 
   def reset(self, seed=None, options=None):
@@ -346,6 +351,12 @@ class BalletEnvironment(gym.Env):
     # TODO : differentiate between termination & truncation for gym>=0.26.0
     return observation, reward, self._done, False, info
 
+  def render(self):
+    canvas = np.zeros((99, 200, 3), dtype=np.uint8)
+    canvas[:, :99, :] = self.curr_img_obs
+    if self.curr_lang_obs:
+        cv2.putText(canvas, self.curr_lang_obs, (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+    return canvas
 
   def _is_game_over(self):
     """Returns whether it is game over, either from the engine or timeout."""

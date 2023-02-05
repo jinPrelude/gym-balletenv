@@ -10,10 +10,10 @@ Gym-style implementation of the original dm_env style [Ballet environment](https
 - Support [gymnasium](https://github.com/Farama-Foundation/Gymnasium)>=0.27.0 in [v.0.0.2](https://github.com/jinPrelude/gym-balletenv/releases/tag/v0.0.2) (older gym style is supported in [v.0.0.1](https://github.com/jinPrelude/gym-balletenv/releases/tag/v0.0.1))
 - Implement wrappers for gym-balletenv:
     - [x] [gray_scale_observation](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/gray_scale_observation.py)
-    - [x] [record_video](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/record_video.py)
     - [x] [transpose_observation](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/transpose_observation.py)
     - [x] [OhehotLanguage](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/onehot_language.py)
-- And the following gymnasium wrappers are also tested for gym-balletenv:
+- And the following gymnasium wrappers are tested for gym-balletenv:
+    - [x] [gymnasium.wrappers.RecordVideo](https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/wrappers/record_video.py)
     - [x] [gymnasium.wrappers.RecordEpisodeStatistics](https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/wrappers/record_episode_statistics.py)
     - [x] [gymnasium.vector.SyncVectorEnv](https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/vector/sync_vector_env.py)
     - [x] [gymnasium.vector.AsyncVectorEnv](https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/vector/async_vector_env.py)
@@ -44,11 +44,6 @@ while not terminated:
 
 Check out the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-balletenv-example) more usage of gym-balletenv and its wrappers.
 
-## Prerequisite for RecordVideo wrapper
-[RecordVideo Wrapper](https://github.com/jinPrelude/gym-balletenv/blob/master/gym_balletenv/wrappers/record_video.py) uses [pygifsicle](https://github.com/LucaCappelletti94/pygifsicle) for optimizing the recorded gif file, so you need to install gifsicle to use it:
-```bash
-sudo apt-get install gifsicle
-```
 ## Easy mode
 **Easy mode** is a custom feature that removes various color options and limited dancer shape by the number of dancers. So all the colors of the dancers are "red", and only 4 shape of the dancers will be sampling for 4 dancers environment. This feature is made for rapid model evaluation purpose.
 
