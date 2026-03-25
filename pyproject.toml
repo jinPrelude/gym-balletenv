@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gym_balletenv"
+version = "0.1.0"
+description = "A Gymnasium environment for the ballet task"
+license = "Apache-2.0"
+requires-python = ">=3.8"
+dependencies = [
+    "gymnasium>=1.0.0",
+    "pycolab @ git+https://github.com/deepmind/pycolab.git",
+    "absl-py",
+    "opencv-python",
+]

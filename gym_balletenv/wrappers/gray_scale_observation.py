@@ -1,7 +1,4 @@
-"""gray_scale_observation for balletenv.
-original code
-    : https://github.com/openai/gym/blob/master/gym/wrappers/gray_scale_observation.py
-"""
+"""gray_scale_observation for balletenv."""
 import numpy as np
 
 import gymnasium as gym

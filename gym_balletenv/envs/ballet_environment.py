@@ -27,8 +27,6 @@ The room is upsampled at a size of 9 pixels per square to render a view for the
 agent, which is cropped in egocentric perspective, i.e. the agent is always in
 the center of its view (see https://arxiv.org/abs/1910.00571).
 """
-from absl import app
-from absl import flags
 from absl import logging
 
 import gymnasium as gym
@@ -39,8 +37,6 @@ import cv2
 from pycolab import cropping
 
 from gym_balletenv.envs import ballet_environment_core as ballet_core
-
-FLAGS = flags.FLAGS
 
 UPSAMPLE_SIZE = 9  # pixels per game square
 SCROLL_CROP_SIZE = 11  # in game squares
@@ -234,7 +230,6 @@ class BalletEnvironment(gym.Env):
       Discrete(14))
     )
     self.action_space = Discrete(8)
-    self.reward_range = (0, 1)
 
     assert render_mode is None or render_mode in self.metadata["render_modes"]
     self.render_mode = render_mode
@@ -340,39 +335,24 @@ class BalletEnvironment(gym.Env):
     img_obs, instruct_str = self._get_obs(observation)
     observation = (img_obs, LANG_DICT[instruct_str])
 
-    # Check the current status of the game.
-    if self._game_over:
-      self._done = True
-    else:
-      self._done = False
+    # Separate terminated (game logic) from truncated (time limit)
+    terminated = self._current_game.game_over
+    truncated = self._current_game.the_plot.frame >= self._max_steps
+    self._done = terminated or truncated
 
     # create info dict which contains real language string
     info = {"instruction_string": instruct_str}
-    # TODO : differentiate between termination & truncation for gym>=0.26.0
-    return observation, reward, self._done, False, info
+    return observation, reward, terminated, truncated, info
 
   def render(self):
-    canvas = np.zeros((99, 200, 3), dtype=np.uint8)
-    canvas[:, :99, :] = self.curr_img_obs
-    if self.curr_lang_obs:
-        cv2.putText(canvas, self.curr_lang_obs, (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-    return canvas
+    if self.render_mode == "rgb_array":
+      canvas = np.zeros((99, 200, 3), dtype=np.uint8)
+      canvas[:, :99, :] = self.curr_img_obs
+      if self.curr_lang_obs:
+          cv2.putText(canvas, self.curr_lang_obs, (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+      return canvas
 
   def _is_game_over(self):
     """Returns whether it is game over, either from the engine or timeout."""
     return (self._current_game.game_over or
             (self._current_game.the_plot.frame >= self._max_steps))
-
-
-def main(argv):
-  if len(argv) > 1:
-    raise app.UsageError("Too many command-line arguments.")
-  env = BalletEnvironment("4_delay16")
-  for _ in range(3):
-    obs = env.reset().observation
-    for _ in range(300):
-      obs = env.step(0).observation
-    print(obs)
-
-if __name__ == "__main__":
-  app.run(main)
