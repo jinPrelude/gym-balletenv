@@ -354,6 +354,10 @@ class BalletEnvironment(gym.Env):
           cv2.putText(canvas, self.curr_lang_obs, (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
       return canvas
 
+  @property
+  def max_episode_length(self):
+    return self._max_steps
+
   def _is_game_over(self):
     """Returns whether it is game over, either from the engine or timeout."""
     return (self._current_game.game_over or
