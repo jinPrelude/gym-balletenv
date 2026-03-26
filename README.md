@@ -27,11 +27,14 @@ pip install -e .
 import gym_balletenv
 import gymnasium as gym
 
-# Default: 2 dancers, delay 16, max_steps 500
+# Default: 2 dancers, delay 16 (max_steps auto-set to 320)
 env = gym.make("gym_balletenv/balletenv-v0")
 
-# Custom parameters
-env = gym.make("gym_balletenv/balletenv-v0", level_name="4_delay16", max_steps=320)
+# 8 dancers, delay 48 (max_steps auto-set to 1024)
+env = gym.make("gym_balletenv/balletenv-v0", level_name="8_delay48")
+
+# Override max_steps manually
+env = gym.make("gym_balletenv/balletenv-v0", level_name="4_delay16", max_steps=500)
 
 obs, info = env.reset(seed=0)
 terminated, truncated = False, False
@@ -45,7 +48,7 @@ while not (terminated or truncated):
 from gym_balletenv.envs import BalletEnvironment
 from gym_balletenv.wrappers import GrayScaleObservation
 
-env = BalletEnvironment(level_name="2_delay16", max_steps=320)
+env = BalletEnvironment(level_name="2_delay16")  # max_steps=320 auto
 env = GrayScaleObservation(env)
 
 obs, info = env.reset(seed=0)
@@ -64,5 +67,5 @@ Simply add `_easy` at the end of the `level_name`:
 ```python
 from gym_balletenv.envs import BalletEnvironment
 
-env = BalletEnvironment(level_name="2_delay2_easy", max_steps=320)
+env = BalletEnvironment(level_name="2_delay2_easy")  # max_steps=1024 auto
 ```
