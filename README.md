@@ -69,3 +69,20 @@ from gym_balletenv.envs import BalletEnvironment
 
 env = BalletEnvironment(level_name="2_delay2_easy")  # max_steps=1024 auto
 ```
+
+## Per-episode Sampling (v1)
+The `BalletEnvironment-v1` registration allows per-episode uniform sampling of `num_dancers` and `dance_delay`. Each `reset()` call samples new values from the provided ranges.
+
+```python
+import gymnasium as gym
+import gym_balletenv
+
+# Sample num_dancers from {2, 4, 6} and delay from {16, 48} each episode
+env = gym.make("gym_balletenv/BalletEnvironment-v1", level_name="2_delay16",
+               num_dancers_range=[2, 4, 6], dance_delay_range=[16, 48])
+
+# max_steps is auto-computed from worst-case (max delay)
+obs, info = env.reset(seed=0)
+```
+
+When ranges are `None` (default), behavior is identical to `balletenv-v0`.

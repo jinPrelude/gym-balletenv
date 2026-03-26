@@ -192,7 +192,8 @@ class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
   metadata = {"render_modes": ["rgb_array"], "render_fps": 15}
 
-  def __init__(self, level_name, max_steps=None, render_mode="rgb_array"):
+  def __init__(self, level_name, max_steps=None, render_mode="rgb_array",
+               num_dancers_range=None, dance_delay_range=None):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -222,9 +223,14 @@ class BalletEnvironment(gym.Env):
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
     if max_steps is None:
-      max_steps = 320 if dance_delay == 16 else 1024
+      worst_delay = max(dance_delay_range) if dance_delay_range else dance_delay
+      max_steps = 320 if worst_delay <= 16 else 1024
     self._max_steps = max_steps
     self._easy_mode = easy_mode
+
+    # Store sampling ranges (None = fixed from level_name)
+    self._num_dancers_range = num_dancers_range
+    self._dance_delay_range = dance_delay_range
 
     img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, 3)
     self.observation_space = Tuple(
@@ -310,6 +316,11 @@ class BalletEnvironment(gym.Env):
     """Start a new episode."""
     # set seed
     super().reset(seed=seed)
+    # Per-episode sampling of num_dancers and dance_delay
+    if self._num_dancers_range is not None:
+        self._num_dancers = int(self.np_random.choice(self._num_dancers_range))
+    if self._dance_delay_range is not None:
+        self._dance_delay = int(self.np_random.choice(self._dance_delay_range))
     # Build a new game and retrieve its first set of state/reward/discount.
     self._current_game = self._game_factory()
     # set up rendering, cropping, and state for current game
