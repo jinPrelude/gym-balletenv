@@ -192,7 +192,7 @@ class BalletEnvironment(gym.Env):
   """A Python environment API for pycolab ballet tasks."""
   metadata = {"render_modes": ["rgb_array"], "render_fps": 15}
 
-  def __init__(self, level_name, max_steps, render_mode="rgb_array"):
+  def __init__(self, level_name, max_steps=None, render_mode="rgb_array"):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -221,6 +221,8 @@ class BalletEnvironment(gym.Env):
     assert num_dancers in range(1, 9)
     self._num_dancers = num_dancers
     self._dance_delay = dance_delay
+    if max_steps is None:
+      max_steps = 320 if dance_delay == 16 else 1024
     self._max_steps = max_steps
     self._easy_mode = easy_mode
 
