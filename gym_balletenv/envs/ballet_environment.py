@@ -334,7 +334,11 @@ class BalletEnvironment(gym.Env):
     observation, _, _ = self._current_game.its_showtime()
     img_obs, instruct_str = self._get_obs(observation)
     observation = (img_obs, LANG_DICT[instruct_str])
-    info = {"instruction_string": instruct_str}
+    info = {
+        "instruction_string": instruct_str,
+        "num_dancers": self._num_dancers,
+        "dance_delay": self._dance_delay,
+    }
     return observation, info
 
   def step(self, action):
@@ -354,7 +358,11 @@ class BalletEnvironment(gym.Env):
     self._done = terminated or truncated
 
     # create info dict which contains real language string
-    info = {"instruction_string": instruct_str}
+    info = {
+        "instruction_string": instruct_str,
+        "num_dancers": self._num_dancers,
+        "dance_delay": self._dance_delay,
+    }
     return observation, reward, terminated, truncated, info
 
   def render(self):

@@ -1,3 +1,2 @@
-from gym_balletenv.wrappers.gray_scale_observation import GrayScaleObservation
 from gym_balletenv.wrappers.transpose_observation import TransposeObservation
 from gym_balletenv.wrappers.onehot_language import OnehotLanguage
