@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for pycolab_ballet.ballet_environment_wrapper."""
+"""Tests for ballet_environment."""
 from absl.testing import absltest
 from absl.testing import parameterized
 
@@ -49,11 +49,13 @@ class BalletEnvironmentTest(parameterized.TestCase):
                         3))
       self.assertEqual(observation[1], 3) # index 3 equal to "up_and_down"
     self.assertEqual(reward, 1.)
-    # check egocentric scrolling is working, by checking object is in center
+    # check agent template is at its actual board position (no scrolling)
+    ar, ac = env._current_game.agent_row, env._current_game.agent_col
     np.testing.assert_array_almost_equal(
-        observation[0][45:54, 45:54],
-        ballet_environment._generate_template("orange plus"))
-    
+        observation[0][ar*9:(ar+1)*9, ac*9:(ac+1)*9],
+        ballet_environment._CHAR_TO_TEMPLATE_BASE[
+            ballet_environment_core.AGENT_CHAR])
+
     env = ballet_environment.BalletEnvironment(
       "2_delay2_easy",
       max_steps=200
@@ -122,8 +124,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
     env = ballet_environment.BalletEnvironment(
         "4_delay2_easy", max_steps=200)
     env.reset(seed=0)
-    char_to_color_shape = env._current_game.the_plot[
-        "char_to_color_shape"]
+    char_to_color_shape = env._current_game.char_to_color_shape
     shapes = [cs[1].split()[1] for cs in char_to_color_shape]
     self.assertTrue(all(s == "triangle" for s in shapes))
 

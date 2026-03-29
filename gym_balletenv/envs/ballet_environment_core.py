@@ -12,24 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The pycolab core of the environment for going to the ballet.
+"""Pure NumPy game engine for the ballet environment.
 
-This builds the text-based (non-graphical) engine of the environment, and offers
-a UI which a human can play (for a fixed level). However, the logic of level
-creation, the graphics, and anything that is external to the pycolab engine
-itself is contained in ballet_environment.py.
+Replaces the PyColab-based engine with direct numpy array manipulation
+for higher throughput. The game logic is identical: dancers perform
+choreography sequences on an 11x11 grid, then the agent navigates to
+the target dancer.
 """
-import curses
 import enum
-
-from absl import app
-from absl import flags
-
-from pycolab import ascii_art
-from pycolab import human_ui
-from pycolab.prefab_parts import sprites as prefab_sprites
-
-FLAGS = flags.FLAGS
+import numpy as np
 
 ROOM_SIZE = (11, 11)  # one square around edge will be wall.
 DANCER_POSITIONS = [(2, 2), (2, 5), (2, 8),
@@ -47,7 +38,6 @@ POSSIBLE_DANCER_CHARS = [
 DANCE_SEQUENCE_LENGTHS = 16
 
 
-# movement directions for dancers / actions for agent
 class DIRECTIONS(enum.IntEnum):
   N = 0
   NE = 1
@@ -57,6 +47,7 @@ class DIRECTIONS(enum.IntEnum):
   SW = 5
   W = 6
   NW = 7
+
 
 DANCE_SEQUENCES = {
     "circle_cw": [
@@ -139,199 +130,200 @@ DANCE_SEQUENCES = {
     ],
 }
 
+# Direction deltas: indexed by DIRECTIONS enum value -> (row_delta, col_delta)
+_DIRECTION_DELTAS = np.array(
+    [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)],
+    dtype=np.int8)
 
-class DancerSprite(prefab_sprites.MazeWalker):
-  """A `Sprite` for dancers."""
+# Pre-convert dance sequences to delta arrays for fast indexing
+_DANCE_DELTAS = {}
+for _name, _seq in DANCE_SEQUENCES.items():
+    _DANCE_DELTAS[_name] = _DIRECTION_DELTAS[np.array(_seq, dtype=np.int8)]
 
-  def __init__(self, corner, position, character, motion, color, shape,
-               value=0.):
-    super(DancerSprite, self).__init__(
-        corner, position, character, impassable="#")
-    self.motion = motion
-    self.dance_sequence = DANCE_SEQUENCES[motion].copy()
-    self.color = color
-    self.shape = shape
-    self.value = value
-    self.is_dancing = False
+# ASCII codes for fast board operations
+_FLOOR_CODE = ord(FLOOR_CHAR)
+_WALL_CODE = ord(WALL_CHAR)
+_AGENT_CODE = ord(AGENT_CHAR)
 
-  def update(self, actions, board, layers, backdrop, things, the_plot):
-    if the_plot["task_phase"] == "dance" and self.is_dancing:
-      if not self.dance_sequence:
-        raise ValueError(
-            "Dance sequence is empty! Was this dancer repeated in the order?")
-      dance_move = self.dance_sequence.pop(0)
-      if dance_move == DIRECTIONS.N:
-        self._north(board, the_plot)
-      elif dance_move == DIRECTIONS.NE:
-        self._northeast(board, the_plot)
-      elif dance_move == DIRECTIONS.E:
-        self._east(board, the_plot)
-      elif dance_move == DIRECTIONS.SE:
-        self._southeast(board, the_plot)
-      elif dance_move == DIRECTIONS.S:
-        self._south(board, the_plot)
-      elif dance_move == DIRECTIONS.SW:
-        self._southwest(board, the_plot)
-      elif dance_move == DIRECTIONS.W:
-        self._west(board, the_plot)
-      elif dance_move == DIRECTIONS.NW:
-        self._northwest(board, the_plot)
-
-      if not self.dance_sequence:  # done!
-        self.is_dancing = False
-        the_plot["time_until_next_dance"] = the_plot["dance_delay"]
-    else:
-      if self.position == things[AGENT_CHAR].position:
-        # Award the player the appropriate amount of reward, and end episode.
-        the_plot.add_reward(self.value)
-        the_plot.terminate_episode()
+# Pre-computed base board (walls + floor)
+_BASE_BOARD = np.full(ROOM_SIZE, _FLOOR_CODE, dtype=np.uint8)
+_BASE_BOARD[0, :] = _WALL_CODE
+_BASE_BOARD[-1, :] = _WALL_CODE
+_BASE_BOARD[:, 0] = _WALL_CODE
+_BASE_BOARD[:, -1] = _WALL_CODE
 
 
-class PlayerSprite(prefab_sprites.MazeWalker):
-  """The player / agent character.
+class BalletGame:
+    """Pure numpy game engine for the ballet environment.
 
-  MazeWalker class methods handle basic movement and collision detection.
-  """
+    Manages an 11x11 board, entity positions, dance phases, and collision.
+    Designed for maximum throughput: no object creation per step, no string
+    comparisons in the hot path, array index counters instead of list pops.
+    """
 
-  def __init__(self, corner, position, character):
-    super(PlayerSprite, self).__init__(
-        corner, position, character, impassable="#")
+    def __init__(self, dancers_and_properties, dance_delay=16):
+        """Initialize the game.
 
-  def update(self, actions, board, layers, backdrop, things, the_plot):
-    if the_plot["task_phase"] == "dance":
-      # agent's actions are ignored, this logic updates the dance phases.
-      if the_plot["time_until_next_dance"] > 0:
-        the_plot["time_until_next_dance"] -= 1
-        if the_plot["time_until_next_dance"] == 0:  # next phase time!
-          if the_plot["dance_order"]:  # start the next dance!
-            next_dancer = the_plot["dance_order"].pop(0)
-            things[next_dancer].is_dancing = True
-          else:  # choice time!
-            the_plot["task_phase"] = "choice"
-            the_plot["instruction_string"] = the_plot[
-                "choice_instruction_string"]
-    elif the_plot["task_phase"] == "choice":
-      # agent can now move and make its choice
-      if actions == DIRECTIONS.N:
-        self._north(board, the_plot)
-      elif actions == DIRECTIONS.NE:
-        self._northeast(board, the_plot)
-      elif actions == DIRECTIONS.E:
-        self._east(board, the_plot)
-      elif actions == DIRECTIONS.SE:
-        self._southeast(board, the_plot)
-      elif actions == DIRECTIONS.S:
-        self._south(board, the_plot)
-      elif actions == DIRECTIONS.SW:
-        self._southwest(board, the_plot)
-      elif actions == DIRECTIONS.W:
-        self._west(board, the_plot)
-      elif actions == DIRECTIONS.NW:
-        self._northwest(board, the_plot)
+        Args:
+            dancers_and_properties: list of (character, (row, col), motion,
+                shape, color, value) tuples.
+            dance_delay: steps to wait between dances.
+        """
+        self.num_dancers = len(dancers_and_properties)
+        self.dance_delay = dance_delay
+        self.game_over = False
+        self.frame = 0
+
+        # Board state
+        self.board = _BASE_BOARD.copy()
+
+        # Agent
+        self.agent_row, self.agent_col = AGENT_START
+        self.board[self.agent_row, self.agent_col] = _AGENT_CODE
+
+        # Dancers -- store properties in parallel arrays for speed
+        self.dancer_chars = []      # character strings (for external reference)
+        self.dancer_codes = []      # ASCII codes (for board ops)
+        self.dancer_rows = []
+        self.dancer_cols = []
+        self.dancer_motions = []    # motion name strings
+        self.dancer_deltas = []     # pre-computed (16, 2) delta arrays
+        self.dancer_values = []     # reward values
+
+        # Metadata for external use (templates, instructions)
+        self.char_to_color_shape = []
+        choice_instruction_string = "watch"
+
+        # Dance scheduling
+        self.dance_order = []       # list of dancer indices to perform
+
+        for i, (char, pos, motion, shape, color, value) in enumerate(
+                dancers_and_properties):
+            self.dancer_chars.append(char)
+            self.dancer_codes.append(ord(char))
+            self.dancer_rows.append(pos[0])
+            self.dancer_cols.append(pos[1])
+            self.dancer_motions.append(motion)
+            self.dancer_deltas.append(_DANCE_DELTAS[motion])
+            self.dancer_values.append(value)
+            self.char_to_color_shape.append((char, color + " " + shape))
+            self.dance_order.append(i)
+            if value > 0.:
+                choice_instruction_string = motion
+
+            # Place dancer on board
+            self.board[pos[0], pos[1]] = ord(char)
+
+        # Phase state machine
+        # task_phase: 0 = dance, 1 = choice
+        self.task_phase = 0
+        self.instruction_string = "watch"
+        self.choice_instruction_string = choice_instruction_string
+        self.time_until_next_dance = 1  # first dancer starts after 1 step
+        self.current_dancing_idx = -1   # no dancer currently dancing
+        self.dance_step_idx = 0         # step within current dance
+        self.dance_order_idx = 0        # next dancer in dance_order to start
+
+        # Reward accumulator for current step
+        self._reward = 0.0
+
+    def play(self, action):
+        """Execute one game step. Returns (reward,).
+
+        Update order matches PyColab's schedule:
+        1. Agent (PlayerSprite) update -- handles phase transitions + agent movement
+        2. Dancer updates -- handle dance moves + collision with agent
+
+        Args:
+            action: int, 0-7 corresponding to DIRECTIONS enum.
+
+        Returns:
+            reward: float, 0.0 or dancer's value if agent reached it.
+        """
+        self._reward = 0.0
+        self.frame += 1
+
+        # --- Phase 1: Agent update (matches PlayerSprite.update) ---
+        if self.task_phase == 0:  # dance phase
+            # Agent cannot move during dance. Handle dance scheduling.
+            if self.time_until_next_dance > 0:
+                self.time_until_next_dance -= 1
+                if self.time_until_next_dance == 0:
+                    if self.dance_order_idx < len(self.dance_order):
+                        # Start next dancer
+                        self.current_dancing_idx = self.dance_order[
+                            self.dance_order_idx]
+                        self.dance_order_idx += 1
+                        self.dance_step_idx = 0
+                    else:
+                        # All dances done -- enter choice phase
+                        self.task_phase = 1
+                        self.instruction_string = (
+                            self.choice_instruction_string)
+        elif self.task_phase == 1:  # choice phase
+            # Agent can move
+            self._move_agent(action)
+
+        # --- Phase 2: Dancer updates (matches DancerSprite.update) ---
+        if self.task_phase == 0 and self.current_dancing_idx >= 0:
+            di = self.current_dancing_idx
+            if self.dance_step_idx < DANCE_SEQUENCE_LENGTHS:
+                # Move the dancing dancer
+                self._move_dancer(di, self.dance_step_idx)
+                self.dance_step_idx += 1
+                if self.dance_step_idx >= DANCE_SEQUENCE_LENGTHS:
+                    # Dance finished
+                    self.current_dancing_idx = -1
+                    self.time_until_next_dance = self.dance_delay
+        elif self.task_phase == 1:
+            # In choice phase, check if agent reached any dancer
+            for di in range(self.num_dancers):
+                if (self.agent_row == self.dancer_rows[di] and
+                        self.agent_col == self.dancer_cols[di]):
+                    self._reward = self.dancer_values[di]
+                    self.game_over = True
+                    break
+
+        return self._reward
+
+    def _move_agent(self, action):
+        """Move agent in the given direction if destination is not a wall."""
+        dr, dc = _DIRECTION_DELTAS[action]
+        new_row = self.agent_row + dr
+        new_col = self.agent_col + dc
+        if self.board[new_row, new_col] != _WALL_CODE:
+            # Clear old position, set new
+            self.board[self.agent_row, self.agent_col] = _FLOOR_CODE
+            self.agent_row = new_row
+            self.agent_col = new_col
+            self.board[self.agent_row, self.agent_col] = _AGENT_CODE
+
+    def _move_dancer(self, dancer_idx, step_idx):
+        """Move a dancer according to its dance sequence."""
+        deltas = self.dancer_deltas[dancer_idx]
+        dr = int(deltas[step_idx, 0])
+        dc = int(deltas[step_idx, 1])
+        old_row = self.dancer_rows[dancer_idx]
+        old_col = self.dancer_cols[dancer_idx]
+        new_row = old_row + dr
+        new_col = old_col + dc
+        code = self.dancer_codes[dancer_idx]
+        if self.board[new_row, new_col] != _WALL_CODE:
+            self.board[old_row, old_col] = _FLOOR_CODE
+            self.dancer_rows[dancer_idx] = new_row
+            self.dancer_cols[dancer_idx] = new_col
+            self.board[new_row, new_col] = code
 
 
 def make_game(dancers_and_properties, dance_delay=16):
-  """Constructs an ascii map, then uses pycolab to make it a game.
+    """Create a BalletGame (drop-in for the old pycolab make_game).
 
-  Args:
-    dancers_and_properties: list of (character, (row, column), motion, shape,
-      color, value), for placing objects in the world.
-    dance_delay: how long to wait between dances.
+    Args:
+        dancers_and_properties: list of (character, (row, col), motion,
+            shape, color, value) tuples.
+        dance_delay: steps between dances.
 
-  Returns:
-    this_game: Pycolab engine running the specified game.
-  """
-  num_rows, num_cols = ROOM_SIZE
-  level_layout = []
-  # upper wall
-  level_layout.append("".join([WALL_CHAR] * num_cols))
-  # room
-  middle_string = "".join([WALL_CHAR] + [" "] * (num_cols - 2) + [WALL_CHAR])
-  level_layout.extend([middle_string for _ in range(num_rows - 2)])
-  # lower wall
-  level_layout.append("".join([WALL_CHAR] * num_cols))
-
-  def _add_to_map(obj, loc):
-    """Adds an ascii character to the level at the requested position."""
-    obj_row = level_layout[loc[0]]
-    pre_string = obj_row[:loc[1]]
-    post_string = obj_row[loc[1] + 1:]
-    level_layout[loc[0]] = pre_string + obj + post_string
-
-  _add_to_map(AGENT_CHAR, AGENT_START)
-  sprites = {AGENT_CHAR: PlayerSprite}
-  dance_order = []
-  char_to_color_shape = []
-  # add dancers to level
-  for obj, loc, motion, shape, color, value in dancers_and_properties:
-    _add_to_map(obj, loc)
-    sprites[obj] = ascii_art.Partial(
-        DancerSprite, motion=motion, color=color, shape=shape, value=value)
-    char_to_color_shape.append((obj, color + " " + shape))
-    dance_order += obj
-    if value > 0.:
-      choice_instruction_string = motion
-
-  this_game = ascii_art.ascii_art_to_game(
-      art=level_layout,
-      what_lies_beneath=" ",
-      sprites=sprites,
-      update_schedule=[[AGENT_CHAR],
-                       dance_order])
-
-  this_game.the_plot["task_phase"] = "dance"
-  this_game.the_plot["instruction_string"] = "watch"
-  this_game.the_plot["choice_instruction_string"] = choice_instruction_string
-  this_game.the_plot["dance_order"] = dance_order
-  this_game.the_plot["dance_delay"] = dance_delay
-  this_game.the_plot["time_until_next_dance"] = 1
-  this_game.the_plot["char_to_color_shape"] = char_to_color_shape
-  return this_game
-
-
-def main(argv):
-  del argv  # unused
-  these_dancers_and_properties = [
-      (POSSIBLE_DANCER_CHARS[1], (2, 2), "chevron_up", "triangle", "red", 1),
-      (POSSIBLE_DANCER_CHARS[2], (2, 5), "circle_ccw", "triangle", "red", 0),
-      (POSSIBLE_DANCER_CHARS[3], (2, 8), "plus_cw", "triangle", "red", 0),
-      (POSSIBLE_DANCER_CHARS[4], (5, 2), "plus_ccw", "triangle", "red", 0),
-      (POSSIBLE_DANCER_CHARS[5], (5, 8), "times_cw", "triangle", "red", 0),
-      (POSSIBLE_DANCER_CHARS[6], (8, 2), "up_and_down", "plus", "blue", 0),
-      (POSSIBLE_DANCER_CHARS[7], (8, 5), "left_and_right", "plus", "blue", 0),
-      (POSSIBLE_DANCER_CHARS[8], (8, 8), "zee", "plus", "blue", 0),
-  ]
-
-  game = make_game(dancers_and_properties=these_dancers_and_properties)
-
-  # Note that these colors are only for human UI
-  fg_colours = {
-      AGENT_CHAR: (999, 999, 999),  # Agent is white
-      WALL_CHAR: (300, 300, 300),  # Wall, dark grey
-      FLOOR_CHAR: (0, 0, 0),  # Floor
-  }
-  for (c, _, _, _, col, _) in these_dancers_and_properties:
-    fg_colours[c] = (999, 0, 0) if col == "red" else (0, 0, 999)
-
-  bg_colours = {
-      c: (0, 0, 0) for c in RESERVED_CHARS + POSSIBLE_DANCER_CHARS[1:8]
-  }
-
-  ui = human_ui.CursesUi(
-      keys_to_actions={
-          # Basic movement.
-          curses.KEY_UP: DIRECTIONS.N,
-          curses.KEY_DOWN: DIRECTIONS.S,
-          curses.KEY_LEFT: DIRECTIONS.W,
-          curses.KEY_RIGHT: DIRECTIONS.E,
-          -1: 8,  # Do nothing.
-      },
-      delay=500,
-      colour_fg=fg_colours,
-      colour_bg=bg_colours)
-
-  ui.play(game)
-
-
-if __name__ == "__main__":
-  app.run(main)
+    Returns:
+        BalletGame instance.
+    """
+    return BalletGame(dancers_and_properties, dance_delay)
