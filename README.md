@@ -61,13 +61,17 @@ while not (terminated or truncated):
 Check out the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-balletenv-example) for more usage of gym-balletenv and its wrappers.
 
 ## Easy mode
-**Easy mode** is a custom feature that removes various color options and limits dancer shapes by the number of dancers. All dancer colors are set to "red", and only N shapes are sampled for an N-dancer environment. This feature is made for rapid model evaluation.
+**Easy mode** is a custom feature designed for rapid model evaluation. It simplifies the observation in several ways:
+
+- **Single-channel rendering**: Observations are `(99, 99, 1)` instead of RGB `(99, 99, 3)`, rendered directly in the pipeline without wrapper overhead.
+- **Unified dancer shape**: All dancers use the same shape ("triangle"), since shape identity is not semantically meaningful.
 
 Simply add `_easy` at the end of the `level_name`:
 ```python
 from gym_balletenv.envs import BalletEnvironment
 
 env = BalletEnvironment(level_name="2_delay2_easy")  # max_steps=1024 auto
+# obs[0].shape == (99, 99, 1)
 ```
 
 ## Per-episode Sampling (v1)

@@ -60,6 +60,81 @@ class BalletEnvironmentTest(parameterized.TestCase):
     )
     self.assertEqual(env._easy_mode, True)
 
+  def test_easy_mode_observation_space(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2_easy", max_steps=200)
+    img_space = env.observation_space[0]
+    self.assertEqual(img_space.shape, (99, 99, 1))
+    self.assertEqual(env.observation_space[1].n, 14)
+
+  def test_easy_mode_end_to_end(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2_easy", max_steps=200)
+    obs, info = env.reset(seed=42)
+    self.assertEqual(obs[0].shape, (99, 99, 1))
+    self.assertIn(obs[1], range(14))
+    for _ in range(20):
+      obs, reward, terminated, truncated, info = env.step(0)
+      self.assertEqual(obs[0].shape, (99, 99, 1))
+      if terminated or truncated:
+        break
+
+  def test_generate_template_bw(self):
+    template = ballet_environment._generate_template(
+        "red triangle", easy_mode=True)
+    self.assertEqual(template.shape, (9, 9, 1))
+    self.assertEqual(template.dtype, np.uint8)
+    unique_vals = set(np.unique(template))
+    self.assertTrue(unique_vals.issubset({0, 255}))
+
+  def test_generate_template_rgb_unchanged(self):
+    template = ballet_environment._generate_template("red triangle")
+    self.assertEqual(template.shape, (9, 9, 3))
+
+  def test_easy_mode_agent_template_single_channel(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2_easy", max_steps=200)
+    env.reset(seed=0)
+    agent_template = env._char_to_template[
+        ballet_environment_core.AGENT_CHAR]
+    self.assertEqual(agent_template.shape, (9, 9, 1))
+
+  def test_char_to_template_base_not_mutated(self):
+    original_shape = ballet_environment._CHAR_TO_TEMPLATE_BASE[
+        ballet_environment_core.AGENT_CHAR].shape
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2_easy", max_steps=200)
+    env.reset(seed=0)
+    after_shape = ballet_environment._CHAR_TO_TEMPLATE_BASE[
+        ballet_environment_core.AGENT_CHAR].shape
+    self.assertEqual(original_shape, (9, 9, 3))
+    self.assertEqual(after_shape, (9, 9, 3))
+
+  def test_easy_mode_observation_single_channel(self):
+    env = ballet_environment.BalletEnvironment(
+        "1_delay2_easy", max_steps=200)
+    obs, info = env.reset(seed=0)
+    img = obs[0]
+    self.assertEqual(img.shape, (99, 99, 1))
+    self.assertEqual(img.dtype, np.uint8)
+
+  def test_easy_mode_shapes_unified(self):
+    env = ballet_environment.BalletEnvironment(
+        "4_delay2_easy", max_steps=200)
+    env.reset(seed=0)
+    char_to_color_shape = env._current_game.the_plot[
+        "char_to_color_shape"]
+    shapes = [cs[1].split()[1] for cs in char_to_color_shape]
+    self.assertTrue(all(s == "triangle" for s in shapes))
+
+  def test_easy_mode_render(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2_easy", max_steps=200)
+    env.reset(seed=0)
+    rendered = env.render()
+    self.assertEqual(rendered.shape, (99, 200, 3))
+    self.assertEqual(rendered.dtype, np.uint8)
+
 
 if __name__ == "__main__":
   absltest.main()

@@ -70,7 +70,7 @@ COLORS = {
 }
 
 
-def _generate_template(object_name):
+def _generate_template(object_name, easy_mode=False):
   """Generates a template object image, given a name with color and shape."""
   object_color, object_type = object_name.split()
   template = np.zeros((UPSAMPLE_SIZE, UPSAMPLE_SIZE))
@@ -141,6 +141,10 @@ def _generate_template(object_name):
       template[2*i, :] = 1.
   else:
     raise ValueError("Unknown object: {}".format(object_type))
+
+  if easy_mode:
+    return (template * 255).astype(np.uint8).reshape(
+        UPSAMPLE_SIZE, UPSAMPLE_SIZE, 1)
 
   if object_color not in COLORS:
     raise ValueError("Unknown color: {}".format(object_color))
@@ -232,7 +236,8 @@ class BalletEnvironment(gym.Env):
     self._num_dancers_range = num_dancers_range
     self._dance_delay_range = dance_delay_range
 
-    img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, 3)
+    channels = 1 if self._easy_mode else 3
+    img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, channels)
     self.observation_space = Tuple(
       (Box(low=0, high=255, shape=img_size, dtype=np.uint8),
       Discrete(14))
@@ -260,12 +265,12 @@ class BalletEnvironment(gym.Env):
     target_dancer_index = self.np_random.integers(self._num_dancers)
     motions = list(ballet_core.DANCE_SEQUENCES.keys())
     if self._easy_mode:
-      positions = ballet_core.DANCER_POSITIONS.copy()[:self._num_dancers]
-      colors = ["red" for _ in range(self._num_dancers)]  # No color difference in easy mode.
-      shapes = DANCER_SHAPES.copy()[:self._num_dancers]
+      positions = ballet_core.DANCER_POSITIONS.copy()
+      colors = ["red"] * self._num_dancers
+      shapes = ["triangle"] * self._num_dancers
     else:
       positions = ballet_core.DANCER_POSITIONS.copy()
-      colors = list(COLORS.keys())  
+      colors = list(COLORS.keys())
       shapes = DANCER_SHAPES.copy()
     self.np_random.shuffle(positions)
     self.np_random.shuffle(motions)
@@ -296,7 +301,8 @@ class BalletEnvironment(gym.Env):
     """Renders from raw pycolab image observation to agent-usable ones."""
     observation = self._cropper.crop(observation)
     obs_rows, obs_cols = observation.board.shape
-    image = np.zeros([obs_rows * UPSAMPLE_SIZE, obs_cols * UPSAMPLE_SIZE, 3],
+    channels = 1 if self._easy_mode else 3
+    image = np.zeros([obs_rows * UPSAMPLE_SIZE, obs_cols * UPSAMPLE_SIZE, channels],
                      dtype=np.uint8)
     for i in range(obs_rows):
       for j in range(obs_cols):
@@ -325,9 +331,14 @@ class BalletEnvironment(gym.Env):
     self._current_game = self._game_factory()
     # set up rendering, cropping, and state for current game
     self._char_to_template = {
-        k: _generate_template(v) for k, v in self._current_game.the_plot[
-            "char_to_color_shape"]}
-    self._char_to_template.update(_CHAR_TO_TEMPLATE_BASE)
+        k: _generate_template(v, easy_mode=self._easy_mode)
+        for k, v in self._current_game.the_plot["char_to_color_shape"]}
+    if self._easy_mode:
+      self._char_to_template.update({
+          k: v[:, :, :1].copy()
+          for k, v in _CHAR_TO_TEMPLATE_BASE.items()})
+    else:
+      self._char_to_template.update(_CHAR_TO_TEMPLATE_BASE)
     self._cropper.set_engine(self._current_game)
     self._done = False
     # let's go!
@@ -368,7 +379,10 @@ class BalletEnvironment(gym.Env):
   def render(self):
     if self.render_mode == "rgb_array":
       canvas = np.zeros((99, 200, 3), dtype=np.uint8)
-      canvas[:, :99, :] = self.curr_img_obs
+      img = self.curr_img_obs
+      if self._easy_mode:
+          img = np.repeat(img, 3, axis=2)
+      canvas[:, :99, :] = img
       if self.curr_lang_obs:
           cv2.putText(canvas, self.curr_lang_obs, (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
       return canvas
