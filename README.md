@@ -123,3 +123,48 @@ env = gym.make("gym_balletenv/BalletEnvironment-v1",
 No hand-crafted features (phase, move deltas, etc.) -- the board is a direct representation of what the pixel observation shows, just without rendering. Can be reshaped to `(11, 11)` for spatial models.
 
 **Wrapper compatibility**: `OnehotLanguage` works as-is. `TransposeObservation` is not compatible (nor needed).
+
+## Batched Environment
+
+> **Note**: For high-throughput RL training. Processes N environments in single numpy operations.
+
+`BatchedBalletEnv` eliminates `SyncVectorEnv`'s per-env Python loop overhead by managing all N game states as contiguous numpy arrays. A single `step()` call advances all environments simultaneously.
+
+```python
+from gym_balletenv.envs import BatchedBalletEnv
+import numpy as np
+
+env = BatchedBalletEnv(
+    num_envs=512,
+    level_name="4_delay16",
+    symbolic=True,        # or False for RGB/Easy B&W
+    seed=42,
+)
+
+obs, info = env.reset()
+# obs: tuple(ndarray (512, 121), ndarray (512,))
+
+for _ in range(1000):
+    actions = np.random.randint(0, 8, size=512)
+    obs, reward, terminated, truncated, info = env.step(actions)
+    # reward: (512,), terminated: (512,), truncated: (512,)
+
+env.close()
+```
+
+**Key properties:**
+- All environments in a batch share the same `num_dancers` and `dance_delay`
+- Terminated environments are automatically reset within the same `step()` call
+- Terminal observations are stored in `info["final_observation"]` (list of length N, `None` for non-done envs)
+- Supports all observation modes: RGB `(N, 99, 99, 3)`, Easy B&W `(N, 99, 99, 1)`, Symbolic `(N, 121)`
+- `observation_space` and `action_space` describe single-env spaces (not batched)
+
+### Throughput comparison (N=512, `4_delay16`)
+
+| Mode | `SyncVectorEnv` | `BatchedBalletEnv` | Speedup |
+|------|----------------:|-------------------:|--------:|
+| Symbolic | 220K steps/s | **1.80M steps/s** | **8.2x** |
+| Easy B&W | 55K steps/s | **70K steps/s** | 1.3x |
+| RGB | 48K steps/s | 39K steps/s | ~1x |
+
+Symbolic mode benefits most because the game-logic vectorization dominates. RGB/B&W modes are memory-bandwidth limited by the 11x11 → 99x99 tile rendering.

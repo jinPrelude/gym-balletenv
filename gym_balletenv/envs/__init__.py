@@ -1,2 +1,3 @@
 from gym_balletenv.envs.ballet_environment import BalletEnvironment
 from gym_balletenv.envs.ballet_environment import LANG_DICT
+from gym_balletenv.envs.batched_ballet_environment import BatchedBalletEnv

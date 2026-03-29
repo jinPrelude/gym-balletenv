@@ -366,8 +366,8 @@ class BatchedBalletEnv:
         countdown_active = idx[self._time_until_next[idx] > 0]
         self._time_until_next[countdown_active] -= 1
 
-        # Where countdown just reached 0
-        just_zero = idx[self._time_until_next[idx] == 0]
+        # Where countdown just reached 0 (only from those that were decremented)
+        just_zero = countdown_active[self._time_until_next[countdown_active] == 0]
         if len(just_zero) == 0:
             return
 
