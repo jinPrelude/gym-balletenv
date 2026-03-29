@@ -40,6 +40,19 @@ from gym_balletenv.envs import ballet_environment_core as ballet_core
 
 UPSAMPLE_SIZE = 9  # pixels per game square
 SCROLL_CROP_SIZE = 11  # in game squares
+MAX_DANCERS = 8  # maximum number of dancers (len of DANCER_POSITIONS)
+BOARD_ROWS, BOARD_COLS = ballet_core.ROOM_SIZE  # 11 x 11
+SYMBOLIC_OBS_SIZE = BOARD_ROWS * BOARD_COLS  # 121: flattened board
+
+# Categorical encoding for board characters → normalized [0, 1].
+# floor=0, wall=1, agent=2, dancer_0=3, ..., dancer_7=10
+_NUM_CATEGORIES = 2 + 1 + MAX_DANCERS  # 11 (floor, wall, agent, 8 dancers)
+_BOARD_CHAR_MAP = np.zeros(256, dtype=np.float32)  # ASCII lookup table
+_BOARD_CHAR_MAP[ord(ballet_core.FLOOR_CHAR)] = 0.0 / (_NUM_CATEGORIES - 1)
+_BOARD_CHAR_MAP[ord(ballet_core.WALL_CHAR)] = 1.0 / (_NUM_CATEGORIES - 1)
+_BOARD_CHAR_MAP[ord(ballet_core.AGENT_CHAR)] = 2.0 / (_NUM_CATEGORIES - 1)
+for _i, _ch in enumerate(ballet_core.POSSIBLE_DANCER_CHARS[:MAX_DANCERS]):
+  _BOARD_CHAR_MAP[ord(_ch)] = (3.0 + _i) / (_NUM_CATEGORIES - 1)
 
 DANCER_SHAPES = [
     "triangle", "empty_square", "plus", "inverse_plus", "ex", "inverse_ex",
@@ -197,7 +210,7 @@ class BalletEnvironment(gym.Env):
   metadata = {"render_modes": ["rgb_array"], "render_fps": 15}
 
   def __init__(self, level_name, max_steps=None, render_mode="rgb_array",
-               num_dancers_range=None, dance_delay_range=None):
+               num_dancers_range=None, dance_delay_range=None, symbolic=False):
     """Construct a BalletEnvironment that wraps pycolab games for agent use.
 
     This class inherits from gym and has all the expected methods and specs.
@@ -231,17 +244,21 @@ class BalletEnvironment(gym.Env):
       max_steps = 320 if worst_delay <= 16 else 1024
     self._max_steps = max_steps
     self._easy_mode = easy_mode
+    self._symbolic = symbolic
 
     # Store sampling ranges (None = fixed from level_name)
     self._num_dancers_range = num_dancers_range
     self._dance_delay_range = dance_delay_range
 
-    channels = 1 if self._easy_mode else 3
-    img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE, SCROLL_CROP_SIZE * UPSAMPLE_SIZE, channels)
-    self.observation_space = Tuple(
-      (Box(low=0, high=255, shape=img_size, dtype=np.uint8),
-      Discrete(14))
-    )
+    if self._symbolic:
+      obs_box = Box(low=0.0, high=1.0, shape=(SYMBOLIC_OBS_SIZE,),
+                    dtype=np.float32)
+    else:
+      channels = 1 if self._easy_mode else 3
+      img_size = (SCROLL_CROP_SIZE * UPSAMPLE_SIZE,
+                  SCROLL_CROP_SIZE * UPSAMPLE_SIZE, channels)
+      obs_box = Box(low=0, high=255, shape=img_size, dtype=np.uint8)
+    self.observation_space = Tuple((obs_box, Discrete(14)))
     self.action_space = Discrete(8)
 
     assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -256,9 +273,11 @@ class BalletEnvironment(gym.Env):
     self._game_over = None          # Whether the game has ended.
     self._char_to_template = None   # Mapping of chars to sprite images.
 
-    # rendering tools
-    self._cropper = get_scrolling_cropper(SCROLL_CROP_SIZE, SCROLL_CROP_SIZE,
-                                          " ")
+    # rendering tools (not needed for symbolic mode)
+    self._cropper = None
+    if not self._symbolic:
+      self._cropper = get_scrolling_cropper(SCROLL_CROP_SIZE, SCROLL_CROP_SIZE,
+                                            " ")
 
   def _game_factory(self):
     """Samples dancers and positions, returns a pycolab core game engine."""
@@ -297,6 +316,24 @@ class BalletEnvironment(gym.Env):
         dancers_and_properties=dancers_and_properties,
         dance_delay=self._dance_delay)
 
+  def _get_symbolic_obs(self, observation):
+    """Flattens the raw pycolab board into a categorical float vector.
+
+    The 11x11 board is mapped to normalized categories and flattened:
+      floor=0.0, wall=0.1, agent=0.2, dancer_0=0.3, ..., dancer_7=1.0
+
+    This is the minimal transformation from the original pixel observation:
+    identical spatial information, just without 9x upsampling and color rendering.
+    The temporal model (transformer/LSTM) infers movement patterns from the
+    sequence of board states, exactly as it would from pixel frames.
+    """
+    board = observation.board  # (11, 11) uint8 array of ASCII codes
+    obs = _BOARD_CHAR_MAP[board].flatten()  # vectorized lookup → (121,)
+
+    instruct_str = self._current_game.the_plot["instruction_string"]
+    self.curr_lang_obs = instruct_str
+    return obs, instruct_str
+
   def _get_obs(self, observation):
     """Renders from raw pycolab image observation to agent-usable ones."""
     observation = self._cropper.crop(observation)
@@ -330,21 +367,26 @@ class BalletEnvironment(gym.Env):
     # Build a new game and retrieve its first set of state/reward/discount.
     self._current_game = self._game_factory()
     # set up rendering, cropping, and state for current game
-    self._char_to_template = {
-        k: _generate_template(v, easy_mode=self._easy_mode)
-        for k, v in self._current_game.the_plot["char_to_color_shape"]}
-    if self._easy_mode:
-      self._char_to_template.update({
-          k: v[:, :, :1].copy()
-          for k, v in _CHAR_TO_TEMPLATE_BASE.items()})
-    else:
-      self._char_to_template.update(_CHAR_TO_TEMPLATE_BASE)
-    self._cropper.set_engine(self._current_game)
+    if not self._symbolic:
+      self._char_to_template = {
+          k: _generate_template(v, easy_mode=self._easy_mode)
+          for k, v in self._current_game.the_plot["char_to_color_shape"]}
+      if self._easy_mode:
+        self._char_to_template.update({
+            k: v[:, :, :1].copy()
+            for k, v in _CHAR_TO_TEMPLATE_BASE.items()})
+      else:
+        self._char_to_template.update(_CHAR_TO_TEMPLATE_BASE)
+      self._cropper.set_engine(self._current_game)
     self._done = False
     # let's go!
     observation, _, _ = self._current_game.its_showtime()
-    img_obs, instruct_str = self._get_obs(observation)
-    observation = (img_obs, LANG_DICT[instruct_str])
+    if self._symbolic:
+      vec_obs, instruct_str = self._get_symbolic_obs(observation)
+      observation = (vec_obs, LANG_DICT[instruct_str])
+    else:
+      img_obs, instruct_str = self._get_obs(observation)
+      observation = (img_obs, LANG_DICT[instruct_str])
     info = {
         "instruction_string": instruct_str,
         "num_dancers": self._num_dancers,
@@ -360,8 +402,12 @@ class BalletEnvironment(gym.Env):
 
     self._game_over = self._is_game_over()
     reward = reward if reward is not None else 0.
-    img_obs, instruct_str = self._get_obs(observation)
-    observation = (img_obs, LANG_DICT[instruct_str])
+    if self._symbolic:
+      vec_obs, instruct_str = self._get_symbolic_obs(observation)
+      observation = (vec_obs, LANG_DICT[instruct_str])
+    else:
+      img_obs, instruct_str = self._get_obs(observation)
+      observation = (img_obs, LANG_DICT[instruct_str])
 
     # Separate terminated (game logic) from truncated (time limit)
     terminated = self._current_game.game_over
@@ -379,6 +425,14 @@ class BalletEnvironment(gym.Env):
   def render(self):
     if self.render_mode == "rgb_array":
       canvas = np.zeros((99, 200, 3), dtype=np.uint8)
+      if self._symbolic:
+        label = "[symbolic]"
+        if self.curr_lang_obs:
+          label = f"[symbolic] {self.curr_lang_obs}"
+        cv2.putText(canvas, label, (10, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1,
+                    cv2.LINE_AA)
+        return canvas
       img = self.curr_img_obs
       if self._easy_mode:
           img = np.repeat(img, 3, axis=2)

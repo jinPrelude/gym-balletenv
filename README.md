@@ -90,3 +90,36 @@ obs, info = env.reset(seed=0)
 ```
 
 When ranges are `None` (default), behavior is identical to `balletenv-v0`.
+
+## Symbolic Observation Mode
+
+> **Note**: Not part of the original paper. A custom extension for accelerating memory and length extrapolation experiments.
+
+Symbolic mode replaces pixel observations with the **flattened 11x11 game board** (121 float32 values), eliminating 9x upsampling and color rendering while preserving the identical spatial information, task structure, action space (`Discrete(8)`), language instruction (`Discrete(14)`), episode flow, and reward. The temporal model (transformer/LSTM) infers dancer movement patterns from the sequence of board states, exactly as it would from pixel frames.
+
+```python
+# Quick start
+env = gym.make("gym_balletenv/balletenv-symbolic-v0")
+
+# v1 with per-episode sampling
+env = gym.make("gym_balletenv/BalletEnvironment-v1",
+               level_name="2_delay2",
+               num_dancers_range=[2, 3, 4],
+               dance_delay_range=[2, 4, 6],
+               symbolic=True)
+```
+
+### Observation Layout
+
+`Tuple(Box(121,), Discrete(14))` -- the 11x11 board flattened, with categorical encoding normalized to `[0, 1]`:
+
+| Value | Meaning |
+|-------|---------|
+| `0.0` | Floor |
+| `0.1` | Wall |
+| `0.2` | Agent |
+| `0.3`--`1.0` | Dancer 0--7 |
+
+No hand-crafted features (phase, move deltas, etc.) -- the board is a direct representation of what the pixel observation shows, just without rendering. Can be reshaped to `(11, 11)` for spatial models.
+
+**Wrapper compatibility**: `OnehotLanguage` works as-is. `TransposeObservation` is not compatible (nor needed).

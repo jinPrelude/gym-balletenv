@@ -136,5 +136,114 @@ class BalletEnvironmentTest(parameterized.TestCase):
     self.assertEqual(rendered.dtype, np.uint8)
 
 
+  # --- Symbolic mode tests ---
+
+  def test_symbolic_observation_space(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2", max_steps=200, symbolic=True)
+    obs_box = env.observation_space[0]
+    self.assertEqual(obs_box.shape, (121,))
+    self.assertEqual(obs_box.dtype, np.float32)
+    np.testing.assert_array_equal(obs_box.low, np.zeros(121, dtype=np.float32))
+    np.testing.assert_array_equal(obs_box.high, np.ones(121, dtype=np.float32))
+    self.assertEqual(env.observation_space[1].n, 14)
+
+  def test_symbolic_reset_shape(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2", max_steps=200, symbolic=True)
+    obs, info = env.reset(seed=0)
+    self.assertEqual(obs[0].shape, (121,))
+    self.assertEqual(obs[0].dtype, np.float32)
+    self.assertIn(obs[1], range(14))
+
+  def test_symbolic_values_in_range(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2", max_steps=200, symbolic=True)
+    obs, _ = env.reset(seed=0)
+    for _ in range(50):
+      self.assertTrue(np.all(obs[0] >= 0.0))
+      self.assertTrue(np.all(obs[0] <= 1.0))
+      obs, _, terminated, truncated, _ = env.step(0)
+      if terminated or truncated:
+        break
+
+  def test_symbolic_board_encoding(self):
+    """Verify board cells map to expected categorical values."""
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2", max_steps=200, symbolic=True)
+    obs, _ = env.reset(seed=0)
+    board = obs[0].reshape(11, 11)
+    # Walls: top row should all be wall category (1/10 = 0.1)
+    wall_val = 1.0 / (ballet_environment._NUM_CATEGORIES - 1)
+    for val in board[0, :]:
+      self.assertAlmostEqual(val, wall_val)
+    # Floor: empty cells should be 0.0
+    self.assertAlmostEqual(board[1, 1], 0.0)  # interior corner is floor
+    # Agent: center (5, 5) should be agent category (2/10 = 0.2)
+    agent_val = 2.0 / (ballet_environment._NUM_CATEGORIES - 1)
+    self.assertAlmostEqual(board[5, 5], agent_val)
+
+  def test_symbolic_dancer_movement_changes_board(self):
+    """Board state should change when a dancer moves during its solo."""
+    env = ballet_environment.BalletEnvironment(
+        "1_delay2", max_steps=200, symbolic=True)
+    obs, _ = env.reset(seed=0)
+    prev_board = obs[0].copy()
+    board_changed = False
+    for _ in range(30):
+      obs, _, terminated, truncated, _ = env.step(0)
+      if not np.array_equal(obs[0], prev_board):
+        board_changed = True
+        break
+      prev_board = obs[0].copy()
+      if terminated or truncated:
+        break
+    self.assertTrue(board_changed,
+                    "Board should change as dancer moves during solo")
+
+  def test_symbolic_end_to_end(self):
+    """Navigate to the single dancer using board positions."""
+    env = ballet_environment.BalletEnvironment(
+        "1_delay2", max_steps=200, symbolic=True)
+    obs, _ = env.reset(seed=0)
+    agent_val = 2.0 / (ballet_environment._NUM_CATEGORIES - 1)
+    dancer_val = 3.0 / (ballet_environment._NUM_CATEGORIES - 1)  # dancer_0
+    got_reward = False
+    for _ in range(200):
+      board = obs[0].reshape(11, 11)
+      # Find agent and dancer positions from the board
+      agent_pos = np.argwhere(np.isclose(board, agent_val))
+      dancer_pos = np.argwhere(np.isclose(board, dancer_val))
+      if len(agent_pos) > 0 and len(dancer_pos) > 0:
+        dr = dancer_pos[0, 0] - agent_pos[0, 0]
+        dc = dancer_pos[0, 1] - agent_pos[0, 1]
+        if dr < 0 and dc == 0: action = 0
+        elif dr < 0 and dc > 0: action = 1
+        elif dr == 0 and dc > 0: action = 2
+        elif dr > 0 and dc > 0: action = 3
+        elif dr > 0 and dc == 0: action = 4
+        elif dr > 0 and dc < 0: action = 5
+        elif dr == 0 and dc < 0: action = 6
+        elif dr < 0 and dc < 0: action = 7
+        else: action = 0
+      else:
+        action = 0
+      obs, reward, terminated, truncated, info = env.step(action)
+      if reward == 1.0:
+        got_reward = True
+        break
+      if terminated or truncated:
+        break
+    self.assertTrue(got_reward, "Agent should reach the single dancer")
+
+  def test_symbolic_render(self):
+    env = ballet_environment.BalletEnvironment(
+        "2_delay2", max_steps=200, symbolic=True)
+    env.reset(seed=0)
+    rendered = env.render()
+    self.assertEqual(rendered.shape, (99, 200, 3))
+    self.assertEqual(rendered.dtype, np.uint8)
+
+
 if __name__ == "__main__":
   absltest.main()
