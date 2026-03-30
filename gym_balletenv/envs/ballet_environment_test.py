@@ -57,21 +57,21 @@ class BalletEnvironmentTest(parameterized.TestCase):
             ballet_environment_core.AGENT_CHAR])
 
     env = ballet_environment.BalletEnvironment(
-      "2_delay2_easy",
+      "2_delay2", easy_mode=True,
       max_steps=200
     )
     self.assertEqual(env._easy_mode, True)
 
   def test_easy_mode_observation_space(self):
     env = ballet_environment.BalletEnvironment(
-        "2_delay2_easy", max_steps=200)
+        "2_delay2", easy_mode=True, max_steps=200)
     img_space = env.observation_space[0]
     self.assertEqual(img_space.shape, (99, 99, 1))
     self.assertEqual(env.observation_space[1].n, 14)
 
   def test_easy_mode_end_to_end(self):
     env = ballet_environment.BalletEnvironment(
-        "2_delay2_easy", max_steps=200)
+        "2_delay2", easy_mode=True, max_steps=200)
     obs, info = env.reset(seed=42)
     self.assertEqual(obs[0].shape, (99, 99, 1))
     self.assertIn(obs[1], range(14))
@@ -95,7 +95,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
 
   def test_easy_mode_agent_template_single_channel(self):
     env = ballet_environment.BalletEnvironment(
-        "2_delay2_easy", max_steps=200)
+        "2_delay2", easy_mode=True, max_steps=200)
     env.reset(seed=0)
     agent_template = env._char_to_template[
         ballet_environment_core.AGENT_CHAR]
@@ -105,7 +105,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
     original_shape = ballet_environment._CHAR_TO_TEMPLATE_BASE[
         ballet_environment_core.AGENT_CHAR].shape
     env = ballet_environment.BalletEnvironment(
-        "2_delay2_easy", max_steps=200)
+        "2_delay2", easy_mode=True, max_steps=200)
     env.reset(seed=0)
     after_shape = ballet_environment._CHAR_TO_TEMPLATE_BASE[
         ballet_environment_core.AGENT_CHAR].shape
@@ -114,7 +114,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
 
   def test_easy_mode_observation_single_channel(self):
     env = ballet_environment.BalletEnvironment(
-        "1_delay2_easy", max_steps=200)
+        "1_delay2", easy_mode=True, max_steps=200)
     obs, info = env.reset(seed=0)
     img = obs[0]
     self.assertEqual(img.shape, (99, 99, 1))
@@ -122,7 +122,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
 
   def test_easy_mode_shapes_unified(self):
     env = ballet_environment.BalletEnvironment(
-        "4_delay2_easy", max_steps=200)
+        "4_delay2", easy_mode=True, max_steps=200)
     env.reset(seed=0)
     char_to_color_shape = env._current_game.char_to_color_shape
     shapes = [cs[1].split()[1] for cs in char_to_color_shape]
@@ -130,7 +130,7 @@ class BalletEnvironmentTest(parameterized.TestCase):
 
   def test_easy_mode_render(self):
     env = ballet_environment.BalletEnvironment(
-        "2_delay2_easy", max_steps=200)
+        "2_delay2", easy_mode=True, max_steps=200)
     env.reset(seed=0)
     rendered = env.render()
     self.assertEqual(rendered.shape, (99, 200, 3))

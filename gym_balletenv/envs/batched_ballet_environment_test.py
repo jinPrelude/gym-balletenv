@@ -37,7 +37,7 @@ class BatchedBalletEnvConstructorTest(absltest.TestCase):
         env.close()
 
     def test_constructor_easy_bw(self):
-        env = BatchedBalletEnv(num_envs=4, level_name="2_delay16_easy")
+        env = BatchedBalletEnv(num_envs=4, level_name="2_delay16", easy_mode=True)
         img_space = env.observation_space[0]
         self.assertEqual(img_space.shape, (99, 99, 1))
         env.close()
@@ -78,7 +78,7 @@ class BatchedBalletEnvResetTest(absltest.TestCase):
         env.close()
 
     def test_reset_easy_bw_shapes(self):
-        env = BatchedBalletEnv(num_envs=4, level_name="2_delay16_easy")
+        env = BatchedBalletEnv(num_envs=4, level_name="2_delay16", easy_mode=True)
         obs, info = env.reset()
         self.assertEqual(obs[0].shape, (4, 99, 99, 1))
         env.close()
@@ -285,13 +285,13 @@ class BatchedBalletEnvAutoResetTest(absltest.TestCase):
 class BatchedBalletEnvEquivalenceTest(absltest.TestCase):
     """Verify BatchedBalletEnv(num_envs=1) matches BalletEnvironment exactly."""
 
-    def _run_equivalence(self, level_name, symbolic, num_steps=100):
+    def _run_equivalence(self, level_name, symbolic, num_steps=100, easy_mode=False):
         """Run both envs with same seed and actions, compare outputs."""
-        ref = BalletEnvironment(level_name=level_name, symbolic=symbolic)
+        ref = BalletEnvironment(level_name=level_name, symbolic=symbolic, easy_mode=easy_mode)
         ref_obs, ref_info = ref.reset(seed=42)
 
         batched = BatchedBalletEnv(
-            num_envs=1, level_name=level_name, symbolic=symbolic)
+            num_envs=1, level_name=level_name, symbolic=symbolic, easy_mode=easy_mode)
         bat_obs, bat_info = batched.reset(seed=42)
 
         np.testing.assert_array_almost_equal(
@@ -345,7 +345,7 @@ class BatchedBalletEnvEquivalenceTest(absltest.TestCase):
         self._run_equivalence("2_delay16", symbolic=False, num_steps=200)
 
     def test_equivalence_easy_bw(self):
-        self._run_equivalence("2_delay16_easy", symbolic=False, num_steps=200)
+        self._run_equivalence("2_delay16", symbolic=False, num_steps=200, easy_mode=True)
 
     def test_equivalence_1_dancer(self):
         self._run_equivalence("1_delay2", symbolic=True, num_steps=100)
@@ -406,7 +406,7 @@ class BatchedBalletEnvBenchmarkTest(absltest.TestCase):
     def test_throughput_easy_bw(self):
         """Benchmark Easy B&W mode throughput at N=512."""
         N = 512
-        env = BatchedBalletEnv(num_envs=N, level_name="4_delay16_easy")
+        env = BatchedBalletEnv(num_envs=N, level_name="4_delay16", easy_mode=True)
         env.reset(seed=42)
         for _ in range(50):
             env.step(np.random.randint(0, 8, size=N))

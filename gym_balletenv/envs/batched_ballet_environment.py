@@ -63,21 +63,13 @@ class BatchedBalletEnv:
     All environments in one batch share the same num_dancers and dance_delay.
     """
 
-    def __init__(self, num_envs, level_name, symbolic=False, seed=None):
+    def __init__(self, num_envs, level_name, symbolic=False, seed=None, easy_mode=False):
         self.num_envs = num_envs
         self._symbolic = symbolic
+        self._easy_mode = easy_mode
 
-        # Parse level_name
-        name_parts = level_name.split("_")
-        if len(name_parts) == 3:
-            num_dancers, dance_delay_str, level = name_parts
-            assert level == "easy"
-            self._easy_mode = True
-        elif len(name_parts) == 2:
-            num_dancers, dance_delay_str = name_parts
-            self._easy_mode = False
-        else:
-            raise ValueError(f"Invalid level_name: {level_name}")
+        # Parse level_name: "{num_dancers}_delay{delay}"
+        num_dancers, dance_delay_str = level_name.split("_")
 
         self._num_dancers = int(num_dancers)
         self._dance_delay = int(dance_delay_str[5:])  # "delay16" -> 16

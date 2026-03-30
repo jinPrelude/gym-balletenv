@@ -66,11 +66,11 @@ Check out the repo [gym-balletenv-example](https://github.com/jinPrelude/gym-bal
 - **Single-channel rendering**: Observations are `(99, 99, 1)` instead of RGB `(99, 99, 3)`, rendered directly in the pipeline without wrapper overhead.
 - **Unified dancer shape**: All dancers use the same shape ("triangle"), since shape identity is not semantically meaningful.
 
-Simply add `_easy` at the end of the `level_name`:
+Pass `easy_mode=True` to enable:
 ```python
 from gym_balletenv.envs import BalletEnvironment
 
-env = BalletEnvironment(level_name="2_delay2_easy")  # max_steps=1024 auto
+env = BalletEnvironment(level_name="2_delay2", easy_mode=True)
 # obs[0].shape == (99, 99, 1)
 ```
 

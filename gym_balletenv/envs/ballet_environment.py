@@ -194,18 +194,11 @@ class BalletEnvironment(gym.Env):
   metadata = {"render_modes": ["rgb_array"], "render_fps": 15}
 
   def __init__(self, level_name, max_steps=None, render_mode="rgb_array",
-               num_dancers_range=None, dance_delay_range=None, symbolic=False):
+               num_dancers_range=None, dance_delay_range=None, symbolic=False,
+               easy_mode=False):
     super(BalletEnvironment, self).__init__()
 
-    name_infos = level_name.split("_")
-    if len(name_infos) == 3:
-      num_dancers, dance_delay, level = name_infos
-      assert level == "easy"
-      easy_mode = True
-    elif len(name_infos) == 2:
-      num_dancers, dance_delay = name_infos
-      easy_mode = False
-
+    num_dancers, dance_delay = level_name.split("_")
     num_dancers = int(num_dancers)
     dance_delay = int(dance_delay[5:])
 
